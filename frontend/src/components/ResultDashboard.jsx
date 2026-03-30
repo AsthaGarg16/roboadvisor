@@ -1,0 +1,678 @@
+import { useState, useRef } from 'react'
+import {
+  PieChart, Pie, Cell, Tooltip as RTooltip, ResponsiveContainer,
+  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend
+} from 'recharts'
+import {
+  RotateCcw, Download, AlertTriangle, Info, TrendingUp,
+  CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp
+} from 'lucide-react'
+
+/* ─────────────────────────── CONSTANTS ─────────────────────────── */
+const API = 'http://localhost:5000'
+
+const FUND_COLORS = [
+  '#c9a84c','#38bdf8','#4ade80','#f87171','#a78bfa',
+  '#fb923c','#34d399','#f472b6','#60a5fa','#facc15'
+]
+
+const DONUT_COLORS = {
+  Equity:       '#c9a84c',
+  'Fixed Income':'#38bdf8',
+  Alternatives: '#a78bfa',
+  Cash:         '#4ade80',
+}
+
+const PROFILE_ALLOCATIONS = {
+  Aggressive:             { Equity:80, 'Fixed Income':10, Alternatives:8,  Cash:2  },
+  'Moderately Aggressive':{ Equity:65, 'Fixed Income':20, Alternatives:10, Cash:5  },
+  Balanced:               { Equity:50, 'Fixed Income':30, Alternatives:12, Cash:8  },
+  'Moderately Conservative':{ Equity:30,'Fixed Income':45,Alternatives:12, Cash:13 },
+  Conservative:           { Equity:15, 'Fixed Income':55, Alternatives:10, Cash:20 },
+}
+
+const PROFILE_EXPECTED_RETURN = {
+  Aggressive:0.12, 'Moderately Aggressive':0.09,
+  Balanced:0.07, 'Moderately Conservative':0.055, Conservative:0.04,
+}
+
+const RISK_PROFILES = [
+  { name:'Aggressive',              A:1.5,  std:18, ret:12,  color:'#ef4444' },
+  { name:'Mod. Aggressive',         A:3.0,  std:14, ret:9.5, color:'#f97316' },
+  { name:'Balanced',                A:5.0,  std:10, ret:7,   color:'#eab308' },
+  { name:'Mod. Conservative',       A:7.0,  std:7,  ret:5.5, color:'#22c55e' },
+  { name:'Conservative',            A:9.0,  std:4,  ret:4,   color:'#3b82f6' },
+]
+
+/* ─────────────────────────── HELPERS ───────────────────────────── */
+function rrColor(rr) {
+  if (rr > 20) return { bg:'rgba(239,68,68,.12)', border:'#ef4444', text:'#f87171', label:'Unrealistic', icon:'⚠', urgent:true }
+  if (rr > 10) return { bg:'rgba(239,68,68,.08)', border:'#f87171', text:'#f87171', label:'High — Review Assumptions', icon:'🔴' }
+  if (rr > 6)  return { bg:'rgba(234,179,8,.1)',  border:'#eab308', text:'#fbbf24', label:'Challenging', icon:'🟡' }
+  return             { bg:'rgba(74,222,128,.08)', border:'#4ade80', text:'#4ade80', label:'Achievable',  icon:'🟢' }
+}
+
+function evalAlert(willingness, capacity) {
+  const diff = willingness - capacity
+  if (Math.abs(diff) <= 1) return { type:'green',  icon:<CheckCircle size={14}/>,  msg:'Risk Profile Aligned.', color:'#4ade80', bg:'rgba(74,222,128,.08)',  border:'#4ade80' }
+  if (diff > 1)            return { type:'amber',  icon:<AlertCircle size={14}/>,  msg:`Risk Alert: Willingness > Capability. Profile capped at Capability (A=${capacity.toFixed(1)}).`, color:'#fbbf24', bg:'rgba(234,179,8,.1)', border:'#eab308' }
+  if (diff < -2)           return { type:'blue',   icon:<Info size={14}/>,          msg:'Educational Insight: Capacity >> Comfort. Conservative bias may limit long-term growth.', color:'#38bdf8', bg:'rgba(56,189,248,.08)', border:'#38bdf8' }
+  return                          { type:'red',    icon:<XCircle size={14}/>,       msg:'Goal-Return Gap: Your goals require a more aggressive profile than your comfort allows.', color:'#f87171', bg:'rgba(248,113,113,.1)', border:'#f87171' }
+}
+
+/* ─────────────────────────── SUB-COMPONENTS ────────────────────── */
+
+function RiskGauge({ A }) {
+  const pct = ((A - 1) / 9) * 100
+  return (
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',fontSize:'.68rem',color:'var(--text-muted)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:8}}>
+        <span>Aggressive (A=1)</span><span>Conservative (A=10)</span>
+      </div>
+      <div style={{height:10,borderRadius:99,background:'linear-gradient(90deg,#ef4444 0%,#f97316 25%,#eab308 50%,#22c55e 75%,#3b82f6 100%)',position:'relative'}}>
+        <div style={{position:'absolute',top:'50%',left:`${pct}%`,transform:'translate(-50%,-50%)',width:20,height:20,borderRadius:'50%',background:'var(--text)',border:'3px solid var(--bg)',boxShadow:'0 0 0 3px var(--gold)',transition:'left 1s cubic-bezier(.34,1.56,.64,1)'}}/>
+      </div>
+      <div style={{display:'flex',justifyContent:'space-between',marginTop:8,fontSize:'.72rem',fontFamily:"'IBM Plex Mono',monospace",color:'var(--text-muted)'}}>
+        {[1,2,3,4,5,6,7,8,9,10].map(n=><span key={n} style={{color:Math.abs(A-n)<0.5?'var(--gold)':'var(--text-dim)'}}>{n}</span>)}
+      </div>
+    </div>
+  )
+}
+
+function DonutChart({ profile }) {
+  const alloc = PROFILE_ALLOCATIONS[profile] || PROFILE_ALLOCATIONS['Balanced']
+  const data = Object.entries(alloc).map(([name,value])=>({ name, value }))
+  return (
+    <div style={{display:'flex',alignItems:'center',gap:24,flexWrap:'wrap'}}>
+      <ResponsiveContainer width={180} height={180}>
+        <PieChart>
+          <Pie data={data} cx="50%" cy="50%" innerRadius={54} outerRadius={80}
+            dataKey="value" paddingAngle={2} stroke="none">
+            {data.map((d,i)=><Cell key={d.name} fill={DONUT_COLORS[d.name]||FUND_COLORS[i]}/>)}
+          </Pie>
+          <RTooltip
+            contentStyle={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,fontSize:'.78rem'}}
+            formatter={(v,n)=>[`${v}%`,n]}/>
+        </PieChart>
+      </ResponsiveContainer>
+      <div style={{display:'flex',flexDirection:'column',gap:10,flex:1}}>
+        {data.map(d=>(
+          <div key={d.name} style={{display:'flex',alignItems:'center',gap:10}}>
+            <div style={{width:10,height:10,borderRadius:'50%',background:DONUT_COLORS[d.name],flexShrink:0}}/>
+            <span style={{fontSize:'.8rem',flex:1}}>{d.name}</span>
+            <div style={{height:6,width:80,background:'var(--border)',borderRadius:99,overflow:'hidden'}}>
+              <div style={{height:'100%',width:`${d.value}%`,background:DONUT_COLORS[d.name],borderRadius:99}}/>
+            </div>
+            <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:'.78rem',color:'var(--text-muted)',minWidth:32,textAlign:'right'}}>{d.value}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function FundTable({ data, gmvp, profile }) {
+  const [tooltip, setTooltip] = useState(null)
+  if (!data) return <div style={{color:'var(--text-muted)',fontSize:'.85rem'}}>Portfolio data not loaded.</div>
+  const { fund_names, gmvp_no_short, gmvp_short } = data
+  const gmvpData = profile && profile.includes('Aggressive') ? gmvp_short : gmvp_no_short
+  const weights  = gmvpData?.weights || []
+  const returns  = data.returns || []
+
+  return (
+    <div style={{overflowX:'auto',position:'relative'}}>
+      <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.8rem'}}>
+        <thead>
+          <tr style={{borderBottom:'1px solid var(--border)'}}>
+            {['#','Fund','Exp. Return','Weight','Allocation','Position'].map(h=>(
+              <th key={h} style={{textAlign:'left',padding:'8px 12px',color:'var(--text-muted)',fontSize:'.68rem',textTransform:'uppercase',letterSpacing:'.08em',fontWeight:500}}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {fund_names.map((name,i)=>{
+            const w = weights[i] ?? 0
+            const r = returns[i] ?? 0
+            const isShort = w < 0
+            const pct = Math.abs(w)*100
+            return (
+              <tr key={name} style={{borderBottom:'1px solid var(--border)'}}>
+                <td style={{padding:'10px 12px',color:'var(--text-dim)',fontFamily:"'IBM Plex Mono',monospace"}}>{String(i+1).padStart(2,'0')}</td>
+                <td style={{padding:'10px 12px'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <div style={{width:8,height:8,borderRadius:'50%',background:FUND_COLORS[i%FUND_COLORS.length],flexShrink:0}}/>
+                    <span style={{fontWeight:500}}>{name}</span>
+                  </div>
+                </td>
+                <td style={{padding:'10px 12px',fontFamily:"'IBM Plex Mono',monospace",color:r>=0?'#4ade80':'#f87171'}}>
+                  {r>=0?'+':''}{(r*100).toFixed(2)}%
+                </td>
+                <td style={{padding:'10px 12px',fontFamily:"'IBM Plex Mono',monospace",color:isShort?'#f87171':'var(--text)'}}>
+                  {isShort?'-':''}{pct.toFixed(2)}%
+                </td>
+                <td style={{padding:'10px 12px',width:120}}>
+                  <div style={{height:8,background:'var(--surface2)',borderRadius:99,overflow:'hidden'}}>
+                    <div style={{height:'100%',width:`${Math.min(pct,100)}%`,background:isShort?'#f87171':'#4ade80',borderRadius:99,opacity:.85}}/>
+                  </div>
+                </td>
+                <td style={{padding:'10px 12px'}}>
+                  <div style={{position:'relative',display:'inline-block'}}>
+                    <span style={{
+                      fontSize:'.68rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',
+                      padding:'2px 8px',borderRadius:99,border:'1px solid',cursor: isShort?'help':'default',
+                      color:isShort?'#f87171':'#4ade80', borderColor:isShort?'rgba(248,113,113,.4)':'rgba(74,222,128,.4)',
+                      background:isShort?'rgba(248,113,113,.08)':'rgba(74,222,128,.08)',
+                    }}
+                    onMouseEnter={()=>isShort&&setTooltip(i)}
+                    onMouseLeave={()=>setTooltip(null)}>
+                      {isShort?'Short':'Long'}
+                    </span>
+                    {tooltip===i&&(
+                      <div style={{position:'absolute',bottom:'130%',left:'50%',transform:'translateX(-50%)',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px',width:220,fontSize:'.75rem',lineHeight:1.6,color:'var(--text-muted)',zIndex:99,boxShadow:'0 8px 24px rgba(0,0,0,.4)'}}>
+                        <div style={{color:'var(--text)',fontWeight:600,marginBottom:4}}>Short Selling</div>
+                        Borrowing and selling this fund expecting its price to fall. Profits if it declines; losses if it rises. Requires margin and carries higher risk.
+                      </div>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function FrontierChart({ portfolioData, riskAversion, profile }) {
+  if (!portfolioData) return null
+  const { frontier_no_short, frontier_short, gmvp_no_short, gmvp_short, fund_names, returns, std_devs } = portfolioData
+
+  const frontierNS = frontier_no_short.std.map((s,i)=>({ x:+(s*100).toFixed(2), y:+(frontier_no_short.ret[i]*100).toFixed(2) }))
+  const frontierS  = frontier_short.std.map((s,i)=>({ x:+(s*100).toFixed(2),    y:+(frontier_short.ret[i]*100).toFixed(2)    }))
+  const fundPoints = fund_names.map((name,i)=>({ x:+(std_devs[i]*100).toFixed(2), y:+(returns[i]*100).toFixed(2), name, color:FUND_COLORS[i%FUND_COLORS.length] }))
+  const gmvpNS     = [{ x:+(gmvp_no_short.std*100).toFixed(2), y:+(gmvp_no_short.return*100).toFixed(2), name:'GMVP (No Short)', sharpe:gmvp_no_short.sharpe }]
+  const gmvpS      = [{ x:+(gmvp_short.std*100).toFixed(2),    y:+(gmvp_short.return*100).toFixed(2),    name:'GMVP (Short)',    sharpe:gmvp_short.sharpe    }]
+
+  // Current profile point
+  const pMatch = RISK_PROFILES.find(p=>p.name.toLowerCase().includes(profile?.split(' ')[0]?.toLowerCase()||''))
+  const profilePt = pMatch ? [{ x:pMatch.std, y:pMatch.ret, name:`You — ${profile}` }] : []
+
+  const CustomTip = ({ active, payload }) => {
+    if (!active||!payload?.length) return null
+    const d = payload[0]?.payload
+    return (
+      <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px',fontSize:'.75rem',fontFamily:"'IBM Plex Mono',monospace"}}>
+        {d.name&&<div style={{color:'var(--gold)',marginBottom:4,fontFamily:"'Syne',sans-serif",fontWeight:600}}>{d.name}</div>}
+        <div style={{color:'var(--text-muted)'}}>σ <span style={{color:'var(--text)'}}>{(+d.x).toFixed(2)}%</span></div>
+        <div style={{color:'var(--text-muted)'}}>r <span style={{color:'var(--text)'}}>{(+d.y).toFixed(2)}%</span></div>
+        {d.sharpe!==undefined&&<div style={{color:'var(--text-muted)'}}>Sharpe <span style={{color:'var(--gold)'}}>{(+d.sharpe).toFixed(3)}</span></div>}
+      </div>
+    )
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={340}>
+      <ScatterChart margin={{top:10,right:20,bottom:20,left:10}}>
+        <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" strokeOpacity={.4}/>
+        <XAxis dataKey="x" type="number" domain={['auto','auto']} name="σ%"
+          label={{value:'Annualised σ (%)',position:'insideBottom',offset:-8,fill:'var(--text-muted)',fontSize:10}}
+          tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
+        <YAxis dataKey="y" type="number" domain={['auto','auto']} name="r%"
+          label={{value:'Return (%)',angle:-90,position:'insideLeft',offset:12,fill:'var(--text-muted)',fontSize:10}}
+          tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
+        <Tooltip content={<CustomTip/>}/>
+
+        {/* Frontiers */}
+        <Scatter name="No Short Sales"      data={frontierNS} line={{stroke:'#38bdf8',strokeWidth:2}} fill="transparent"/>
+        <Scatter name="Short Sales Allowed" data={frontierS}  line={{stroke:'#a78bfa',strokeWidth:2,strokeDasharray:'5 3'}} fill="transparent"/>
+
+        {/* 10 fund dots */}
+        {fundPoints.map((fp,i)=>(
+          <Scatter key={fp.name} name={fp.name} data={[fp]} fill={fp.color} r={6} legendType="none"/>
+        ))}
+
+        {/* GMVPs */}
+        <Scatter name="GMVP (No Short)" data={gmvpNS} fill="#38bdf8" r={9} shape="diamond"/>
+        <Scatter name="GMVP (Short)"    data={gmvpS}  fill="#a78bfa" r={9} shape="diamond"/>
+
+        {/* 5 profile risk points */}
+        {RISK_PROFILES.map(p=>(
+          <Scatter key={p.name} name={p.name} data={[{x:p.std,y:p.ret,name:p.name}]} fill={p.color} r={7} legendType="none"/>
+        ))}
+
+        {/* Current profile — gold highlight */}
+        {profilePt.length>0&&(
+          <Scatter name={`You — ${profile}`} data={profilePt} fill="var(--gold)" r={13} legendType="none"
+            shape={props=>{
+              const {cx,cy}=props
+              return <g><circle cx={cx} cy={cy} r={16} fill="var(--gold)" opacity={.25}/><circle cx={cx} cy={cy} r={9} fill="var(--gold)" stroke="var(--bg)" strokeWidth={2}/></g>
+            }}/>
+        )}
+
+        <Legend wrapperStyle={{fontSize:'.72rem',color:'var(--text-muted)',paddingTop:12}}/>
+      </ScatterChart>
+    </ResponsiveContainer>
+  )
+}
+
+/* ─────────────────────────── GOAL PLANNER MODAL ────────────────── */
+const DEFAULT_GOALS = [
+  { id:1, name:'Retirement', horizon:20, fv:500000, planned:true },
+  { id:2, name:'Child Education', horizon:10, fv:150000, planned:true },
+  { id:3, name:'Home Purchase', horizon:5, fv:200000, planned:false },
+]
+
+function GoalPlanner({ investablePV, profileReturn, onClose, onConfirm }) {
+  const [goals, setGoals] = useState(DEFAULT_GOALS)
+
+  function updateGoal(id, field, value) {
+    setGoals(g=>g.map(gl=>gl.id===id?{...gl,[field]:value}:gl))
+  }
+  function addGoal() {
+    setGoals(g=>[...g,{id:Date.now(),name:'New Goal',horizon:10,fv:100000,planned:true}])
+  }
+  function removeGoal(id) { setGoals(g=>g.filter(gl=>gl.id!==id)) }
+
+  // Required return for each goal: FV = PV × (1+r)^n  → r = (FV/PV)^(1/n) - 1
+  const pvPerGoal = investablePV / goals.filter(g=>g.planned).length || 1
+  const goalsWithRR = goals.map(g=>{
+    const pv = g.planned ? pvPerGoal : 0
+    const rr = pv > 0 ? (Math.pow(g.fv/pv, 1/g.horizon)-1)*100 : null
+    return {...g, pv, rr}
+  })
+  const plannedGoals  = goalsWithRR.filter(g=>g.planned && g.rr !== null)
+  const totalFVWeight = plannedGoals.reduce((s,g)=>s+g.fv,0)
+  const wrr = totalFVWeight > 0
+    ? plannedGoals.reduce((s,g)=>s+(g.rr*(g.fv/totalFVWeight)),0)
+    : 0
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:24}} onClick={onClose}>
+      <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--radius-lg)',width:'min(720px,100%)',maxHeight:'85vh',overflowY:'auto',padding:'32px'}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontFamily:"'Lora',serif",fontSize:'1.4rem',marginBottom:6}}>Financial Goal Planner</div>
+        <div style={{fontSize:'.82rem',color:'var(--text-muted)',marginBottom:24}}>Define your goals. Planned goals share your investable capital equally for the required-return calculation.</div>
+
+        {/* Investable PV */}
+        <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:24,padding:'14px 18px',background:'var(--surface2)',borderRadius:'var(--radius)',border:'1px solid var(--border)'}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:'.72rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}}>Investable Capital (PV)</div>
+            <input type="number" value={investablePV} readOnly
+              style={{background:'transparent',border:'none',color:'var(--gold)',fontFamily:"'IBM Plex Mono',monospace",fontSize:'1.1rem',width:'100%',outline:'none'}}/>
+          </div>
+          <div style={{textAlign:'right'}}>
+            <div style={{fontSize:'.72rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}}>Profile Exp. Return</div>
+            <div style={{fontFamily:"'IBM Plex Mono',monospace",color:'#4ade80'}}>{(profileReturn*100).toFixed(1)}% p.a.</div>
+          </div>
+        </div>
+
+        {/* Goals table */}
+        <table style={{width:'100%',borderCollapse:'collapse',marginBottom:16,fontSize:'.8rem'}}>
+          <thead>
+            <tr style={{borderBottom:'1px solid var(--border)'}}>
+              {['Goal','Horizon (yrs)','Target FV ($)','Planned?','Req. Return',''].map(h=>(
+                <th key={h} style={{textAlign:'left',padding:'6px 10px',color:'var(--text-muted)',fontSize:'.68rem',textTransform:'uppercase',letterSpacing:'.08em'}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {goalsWithRR.map(g=>{
+              const rrc = g.rr !== null ? rrColor(g.rr) : null
+              return (
+                <tr key={g.id} style={{borderBottom:'1px solid var(--border)'}}>
+                  <td style={{padding:'8px 10px'}}><input value={g.name} onChange={e=>updateGoal(g.id,'name',e.target.value)} style={inputStyle}/></td>
+                  <td style={{padding:'8px 10px'}}><input type="number" value={g.horizon} onChange={e=>updateGoal(g.id,'horizon',+e.target.value)} style={{...inputStyle,width:70}}/></td>
+                  <td style={{padding:'8px 10px'}}><input type="number" value={g.fv} onChange={e=>updateGoal(g.id,'fv',+e.target.value)} style={{...inputStyle,width:110}}/></td>
+                  <td style={{padding:'8px 10px',textAlign:'center'}}>
+                    <input type="checkbox" checked={g.planned} onChange={e=>updateGoal(g.id,'planned',e.target.checked)}
+                      style={{accentColor:'var(--gold)',width:16,height:16,cursor:'pointer'}}/>
+                  </td>
+                  <td style={{padding:'8px 10px'}}>
+                    {g.planned && rrc ? (
+                      <span style={{color:rrc.text,fontFamily:"'IBM Plex Mono',monospace",fontSize:'.8rem',display:'flex',alignItems:'center',gap:4}}>
+                        {g.rr.toFixed(1)}% {rrc.urgent&&<AlertTriangle size={12}/>}
+                        <span style={{fontSize:'.68rem',marginLeft:4,opacity:.8}}>{rrc.label}</span>
+                      </span>
+                    ) : <span style={{color:'var(--text-dim)',fontSize:'.75rem'}}>Unplanned</span>}
+                  </td>
+                  <td style={{padding:'8px 10px'}}>
+                    <button onClick={()=>removeGoal(g.id)} style={{background:'none',border:'none',color:'var(--text-dim)',cursor:'pointer',fontSize:'1rem',lineHeight:1}}>×</button>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+
+        <button onClick={addGoal} style={{...ghostBtn,marginBottom:24,fontSize:'.78rem'}}>+ Add Goal</button>
+
+        {/* WRR summary */}
+        <div style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:'16px 20px',marginBottom:20}}>
+          <div style={{fontSize:'.72rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:8}}>Weighted Required Return (WRR)</div>
+          <div style={{display:'flex',alignItems:'baseline',gap:12}}>
+            <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'2.2rem',color:rrColor(wrr).text}}>{wrr.toFixed(2)}%</div>
+            <div>
+              <span style={{fontSize:'.82rem',fontWeight:600,color:rrColor(wrr).text}}>{rrColor(wrr).icon} {rrColor(wrr).label}</span>
+              {wrr>10&&<div style={{fontSize:'.75rem',color:'var(--text-muted)',marginTop:2}}>Profile expected return: {(profileReturn*100).toFixed(1)}%. Gap: {(wrr-profileReturn*100).toFixed(1)}pp</div>}
+            </div>
+          </div>
+        </div>
+
+        <div style={{display:'flex',gap:12,justifyContent:'flex-end'}}>
+          <button onClick={onClose} style={ghostBtn}>Cancel</button>
+          <button onClick={()=>onConfirm({goals:goalsWithRR,wrr})} style={primaryBtn}>Confirm Goals →</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────── PDF DOWNLOAD ──────────────────────── */
+async function downloadPDF(data, goalData, profile) {
+  // Build a printable HTML page and trigger window.print via a new window
+  const allocRows = Object.entries(PROFILE_ALLOCATIONS[profile]||{}).map(([k,v])=>`<tr><td>${k}</td><td>${v}%</td></tr>`).join('')
+  const goalRows  = goalData?.goals?.filter(g=>g.planned).map(g=>`<tr><td>${g.name}</td><td>${g.horizon} yrs</td><td>$${g.fv.toLocaleString()}</td><td>${g.rr?.toFixed(2)||'—'}%</td></tr>`).join('') || ''
+  const html = `<!DOCTYPE html><html><head><title>RoboAdvisor Report</title>
+  <style>body{font-family:Georgia,serif;padding:40px;color:#111;max-width:800px;margin:auto}
+  h1{font-size:2rem;margin-bottom:4px}h2{font-size:1.2rem;border-bottom:2px solid #c9a84c;padding-bottom:6px;margin-top:32px}
+  table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #ddd}
+  th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#666}
+  .badge{display:inline-block;padding:4px 12px;border-radius:99px;font-size:.8rem;font-weight:600;background:#c9a84c;color:#000}
+  .disclaimer{font-size:.72rem;color:#999;margin-top:48px;border-top:1px solid #eee;padding-top:16px;line-height:1.6}
+  @media print{body{padding:20px}}</style></head><body>
+  <h1>RoboAdvisor Summary</h1>
+  <p style="color:#666;margin-bottom:8px">Generated ${new Date().toLocaleDateString('en-GB',{year:'numeric',month:'long',day:'numeric'})}</p>
+  <span class="badge">${profile}</span> &nbsp; <span class="badge" style="background:#0f1520;color:#c9a84c;border:1px solid #c9a84c">A = ${data.risk_aversion}</span>
+  <h2>Risk Profile</h2>
+  <table><tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>Risk Aversion (A)</td><td>${data.risk_aversion}</td></tr>
+  <tr><td>Profile</td><td>${data.profile}</td></tr>
+  <tr><td>Utility Function</td><td>${data.utility_formula}</td></tr>
+  <tr><td>Raw Weighted Score</td><td>${data.raw_weighted_sum}</td></tr></table>
+  <h2>Asset Allocation</h2>
+  <table><tr><th>Asset Class</th><th>Weight</th></tr>${allocRows}</table>
+  ${goalRows?`<h2>Financial Goals</h2><table><tr><th>Goal</th><th>Horizon</th><th>Target FV</th><th>Required Return</th></tr>${goalRows}</table>`:''}
+  ${goalData?.wrr!==undefined?`<p><strong>Weighted Required Return (WRR): ${goalData.wrr.toFixed(2)}%</strong></p>`:''}
+  <div class="disclaimer">
+  <strong>Disclaimer:</strong> This report is generated by an educational tool (BMD5302 Financial Modeling project) and does not constitute financial advice. 
+  Past performance is not indicative of future results. All investment involves risk, including the possible loss of principal. 
+  Please consult a licensed financial adviser before making any investment decisions. 
+  This document is for academic purposes only.
+  </div></body></html>`
+
+  const w = window.open('','_blank','width=900,height=700')
+  w.document.write(html)
+  w.document.close()
+  w.focus()
+  setTimeout(()=>w.print(),500)
+}
+
+/* ─────────────────────────── MAIN DASHBOARD ─────────────────────── */
+export default function ResultDashboard({ data, portfolioData, onRetake }) {
+  const [investablePV, setInvestablePV] = useState(100000)
+  const [showGoalPlanner, setShowGoalPlanner] = useState(false)
+  const [goalData, setGoalData] = useState(null)
+  const [expandedSection, setExpandedSection] = useState({ A:true, B:true, C:true, D:true })
+
+  const profile      = data.profile
+  const A            = data.risk_aversion
+  const profileRet   = PROFILE_ALLOCATIONS[profile] ? PROFILE_EXPECTED_RETURN[profile] || 0.07 : 0.07
+  const alloc        = PROFILE_ALLOCATIONS[profile] || {}
+
+  // Simulate willingness vs capacity from A
+  const willingness  = A
+  const capacity     = Math.max(1, Math.min(10, A * (1 + (Math.random()*0.4 - 0.2))))  // ±20% band simulation
+  const alert        = evalAlert(willingness, capacity)
+
+  function toggle(key) { setExpandedSection(s=>({...s,[key]:!s[key]})) }
+
+  const sectionHeader = (label, key, eyebrow) => (
+    <button onClick={()=>toggle(key)} style={{width:'100%',background:'none',border:'none',cursor:'pointer',textAlign:'left',padding:0,marginBottom:expandedSection[key]?20:0}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'18px 0',borderBottom:'1px solid var(--border)'}}>
+        <div>
+          <div style={{fontSize:'.68rem',color:'var(--gold)',letterSpacing:'.14em',textTransform:'uppercase',fontFamily:"'IBM Plex Mono',monospace",marginBottom:4}}>{eyebrow}</div>
+          <div style={{fontFamily:"'Lora',serif",fontSize:'1.25rem',color:'var(--text)'}}>{label}</div>
+        </div>
+        {expandedSection[key]?<ChevronUp size={18} color="var(--text-muted)"/>:<ChevronDown size={18} color="var(--text-muted)"/>}
+      </div>
+    </button>
+  )
+
+  return (
+    <div style={{animation:'fadeUp .5s ease'}}>
+
+      {/* ══ PROFILE BANNER ══════════════════════════════════════════ */}
+      <div style={{background:data.colour,borderRadius:'var(--radius-lg)',padding:'32px 36px',position:'relative',overflow:'hidden',marginBottom:24}}>
+        <div style={{position:'absolute',right:36,top:'50%',transform:'translateY(-50%)',fontFamily:"'Lora',serif",fontSize:'6rem',fontStyle:'italic',opacity:.14,color:'#fff',lineHeight:1,pointerEvents:'none'}}>A={A}</div>
+        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:6}}>
+          <div style={{fontSize:'.72rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(255,255,255,.75)'}}>Your Risk Profile</div>
+          <span style={{fontSize:'.68rem',background:'rgba(255,255,255,.2)',color:'#fff',padding:'2px 10px',borderRadius:99,letterSpacing:'.08em'}}>A = {A.toFixed(2)}</span>
+        </div>
+        <div style={{fontFamily:"'Lora',serif",fontSize:'2.2rem',color:'#fff',fontWeight:500}}>{profile}</div>
+        <div style={{fontSize:'.85rem',color:'rgba(255,255,255,.75)',marginTop:8,maxWidth:480}}>{data.description}</div>
+      </div>
+
+      {/* ══ BAND A — RISK ASSESSMENT ════════════════════════════════ */}
+      <div style={{marginBottom:24}}>
+        {sectionHeader('Risk Assessment Results','A','Band A')}
+        {expandedSection.A && (
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+
+            {/* Gauge */}
+            <div className="card"><div className="card-title">Risk Aversion Gauge</div><RiskGauge A={A}/></div>
+
+            {/* Metrics row */}
+            <div className="grid-3">
+              {[
+                { label:'Risk Aversion (A)', value:A.toFixed(2), sub:'Scale 1–10' },
+                { label:'Weighted Score',   value:data.raw_weighted_sum.toFixed(2), sub:'Pre-normalisation' },
+                { label:'Exp. Return',      value:`${(profileRet*100).toFixed(1)}%`, sub:'Profile benchmark' },
+              ].map(m=>(
+                <div key={m.label} className="card" style={{textAlign:'center',padding:'20px 16px'}}>
+                  <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'1.9rem',color:'var(--text)'}}>{m.value}</div>
+                  <div style={{fontSize:'.68rem',textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text-muted)',marginTop:4}}>{m.label}</div>
+                  <div style={{fontSize:'.7rem',color:'var(--text-dim)',marginTop:2}}>{m.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Utility formula */}
+            <div style={{textAlign:'center',padding:'14px',border:'1px dashed var(--gold-dim)',borderRadius:'var(--radius)',fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'1.1rem',color:'var(--gold)'}}>
+              {data.utility_formula}
+            </div>
+
+            {/* Evaluation alert */}
+            <div style={{display:'flex',alignItems:'flex-start',gap:12,padding:'14px 18px',borderRadius:'var(--radius)',background:alert.bg,border:`1px solid ${alert.border}`}}>
+              <div style={{color:alert.color,marginTop:2,flexShrink:0}}>{alert.icon}</div>
+              <div style={{fontSize:'.85rem',color:alert.color,lineHeight:1.55}}>{alert.msg}</div>
+            </div>
+
+            {/* Answer breakdown */}
+            <details className="card" style={{padding:'20px 28px'}}>
+              <summary style={{cursor:'pointer',fontSize:'.78rem',color:'var(--text-muted)',letterSpacing:'.08em',textTransform:'uppercase',userSelect:'none',fontFamily:"'IBM Plex Mono',monospace"}}>
+                ▶ Answer Breakdown
+              </summary>
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.8rem',marginTop:14}}>
+                <thead><tr style={{borderBottom:'1px solid var(--border)'}}>
+                  {['Q','Weight','Score','Contribution'].map(h=>(
+                    <th key={h} style={{textAlign:'left',padding:'6px 10px',color:'var(--text-muted)',fontSize:'.68rem',textTransform:'uppercase',letterSpacing:'.08em'}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {data.breakdown.map((row,i)=>(
+                    <tr key={i} style={{borderBottom:'1px solid var(--border)'}}>
+                      <td style={{padding:'7px 10px',color:'var(--text-muted)',fontFamily:'monospace'}}>{row.question.toUpperCase()}</td>
+                      <td style={{padding:'7px 10px',fontFamily:'monospace'}}>{row.weight}×</td>
+                      <td style={{padding:'7px 10px',fontFamily:'monospace'}}>{row.score}</td>
+                      <td style={{padding:'7px 10px',fontFamily:'monospace',color:'var(--gold)'}}>{row.contribution.toFixed(3)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          </div>
+        )}
+      </div>
+
+      {/* ══ BAND B — GOAL SUMMARY ═══════════════════════════════════ */}
+      <div style={{marginBottom:24}}>
+        {sectionHeader('Goal Summary & Required Returns','B','Band B')}
+        {expandedSection.B && (
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+
+            {/* Investable PV input */}
+            <div className="card">
+              <div className="card-title">Investable Capital</div>
+              <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+                <div>
+                  <div style={{fontSize:'.72rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:6}}>Current Investable PV ($)</div>
+                  <input type="number" value={investablePV}
+                    onChange={e=>setInvestablePV(Math.max(1,+e.target.value))}
+                    style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--radius)',color:'var(--gold)',fontFamily:"'IBM Plex Mono',monospace",fontSize:'1.1rem',padding:'10px 16px',outline:'none',width:200}}/>
+                </div>
+                <button onClick={()=>setShowGoalPlanner(true)} style={primaryBtn}>Open Goal Planner →</button>
+              </div>
+            </div>
+
+            {/* Goal summary table */}
+            {goalData ? (
+              <div className="card">
+                <div className="card-title">Goal Summary</div>
+
+                {/* WRR strip */}
+                <div style={{display:'flex',alignItems:'center',gap:16,padding:'14px 18px',marginBottom:20,borderRadius:'var(--radius)',background:rrColor(goalData.wrr).bg,border:`1px solid ${rrColor(goalData.wrr).border}`}}>
+                  <div>
+                    <div style={{fontSize:'.7rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:4}}>Weighted Required Return (WRR)</div>
+                    <div style={{display:'flex',alignItems:'baseline',gap:10}}>
+                      <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'2rem',color:rrColor(goalData.wrr).text}}>{goalData.wrr.toFixed(2)}%</div>
+                      <div style={{fontSize:'.82rem',fontWeight:600,color:rrColor(goalData.wrr).text,display:'flex',alignItems:'center',gap:4}}>
+                        {rrColor(goalData.wrr).urgent&&<AlertTriangle size={14}/>} {rrColor(goalData.wrr).label}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{marginLeft:'auto',textAlign:'right'}}>
+                    <div style={{fontSize:'.7rem',color:'var(--text-muted)',marginBottom:4}}>Profile Exp. Return</div>
+                    <div style={{fontFamily:"'IBM Plex Mono',monospace",color:'#4ade80',fontSize:'.9rem'}}>{(profileRet*100).toFixed(1)}%</div>
+                  </div>
+                </div>
+
+                <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.8rem'}}>
+                  <thead><tr style={{borderBottom:'1px solid var(--border)'}}>
+                    {['Goal','Horizon','Target FV','PV Allocated','Req. Return','Status','Planned'].map(h=>(
+                      <th key={h} style={{textAlign:'left',padding:'8px 10px',color:'var(--text-muted)',fontSize:'.68rem',textTransform:'uppercase',letterSpacing:'.08em'}}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {goalData.goals.map((g,i)=>{
+                      const rrc = g.planned && g.rr!==null ? rrColor(g.rr) : null
+                      const fvWeight = g.planned && goalData.goals.filter(x=>x.planned).reduce((s,x)=>s+x.fv,0)
+                      const wt = g.planned && fvWeight > 0 ? (g.fv/fvWeight*100).toFixed(1)+'%' : '—'
+                      return (
+                        <tr key={i} style={{borderBottom:'1px solid var(--border)'}}>
+                          <td style={{padding:'10px 10px',fontWeight:500}}>{g.name}</td>
+                          <td style={{padding:'10px 10px',fontFamily:"'IBM Plex Mono',monospace",color:'var(--text-muted)'}}>{g.horizon} yrs</td>
+                          <td style={{padding:'10px 10px',fontFamily:"'IBM Plex Mono',monospace"}}>${g.fv.toLocaleString()}</td>
+                          <td style={{padding:'10px 10px',fontFamily:"'IBM Plex Mono',monospace",color:'var(--text-muted)'}}>{g.planned?`$${Math.round(g.pv).toLocaleString()}`:'—'}</td>
+                          <td style={{padding:'10px 10px'}}>
+                            {rrc ? (
+                              <span style={{color:rrc.text,fontFamily:"'IBM Plex Mono',monospace",fontSize:'.8rem',display:'flex',alignItems:'center',gap:4}}>
+                                {g.rr.toFixed(2)}% {rrc.urgent&&<AlertTriangle size={11}/>}
+                              </span>
+                            ) : <span style={{color:'var(--text-dim)'}}>—</span>}
+                          </td>
+                          <td style={{padding:'10px 10px'}}>
+                            {rrc ? <span style={{fontSize:'.7rem',color:rrc.text}}>{rrc.label}</span> : <span style={{fontSize:'.7rem',color:'var(--text-dim)'}}>Excluded</span>}
+                          </td>
+                          <td style={{padding:'10px 10px'}}>
+                            <span style={{fontSize:'.7rem',color:g.planned?'#4ade80':'var(--text-dim)'}}>{g.planned?`✓ ${wt}`:'Unplanned'}</span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="card" style={{textAlign:'center',padding:'36px',color:'var(--text-muted)',fontSize:'.88rem'}}>
+                Open the Goal Planner to define your financial goals and see required returns.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ══ BAND C — PORTFOLIO RECOMMENDATION ══════════════════════ */}
+      <div style={{marginBottom:24}}>
+        {sectionHeader('Portfolio Recommendation','C','Band C')}
+        {expandedSection.C && (
+          <div style={{display:'flex',flexDirection:'column',gap:20}}>
+
+            {/* C1 — Donut */}
+            <div className="card">
+              <div className="card-title">C1 — Asset Class Allocation</div>
+              <DonutChart profile={profile}/>
+            </div>
+
+            {/* C2 — Fund table */}
+            <div className="card">
+              <div className="card-title">C2 — Fund Allocation (GMVP Weights)</div>
+              {portfolioData
+                ? <FundTable data={portfolioData} profile={profile}/>
+                : <div style={{color:'var(--text-muted)',fontSize:'.85rem',padding:'16px 0'}}>Portfolio data not available. Ensure Flask is running with your Excel files in ./data/.</div>}
+            </div>
+
+            {/* C3 — Frontier */}
+            <div className="card">
+              <div className="card-title">C3 — Efficient Frontier</div>
+              <div style={{fontSize:'.78rem',color:'var(--text-muted)',marginBottom:16}}>Your risk profile is highlighted in gold. Five profile points and 10 fund positions are shown.</div>
+              {portfolioData
+                ? <FrontierChart portfolioData={portfolioData} riskAversion={A} profile={profile}/>
+                : <div style={{color:'var(--text-muted)',fontSize:'.85rem',padding:'24px 0',textAlign:'center'}}>Connect Flask backend with fund data to render the frontier.</div>}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ══ BAND D — ACTIONS ════════════════════════════════════════ */}
+      <div style={{marginBottom:24}}>
+        {sectionHeader('Actions','D','Band D')}
+        {expandedSection.D && (
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+              <button onClick={()=>downloadPDF(data,goalData,profile)} style={primaryBtn}>
+                <Download size={14}/> Download Summary (PDF)
+              </button>
+              <button onClick={onRetake} style={ghostBtn}>
+                <RotateCcw size={14}/> Restart Assessment
+              </button>
+            </div>
+
+            {/* Disclaimer */}
+            <div style={{padding:'16px 20px',background:'var(--surface2)',borderRadius:'var(--radius)',border:'1px solid var(--border)',borderLeft:'3px solid var(--text-dim)'}}>
+              <div style={{fontSize:'.72rem',fontWeight:600,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text-dim)',marginBottom:6}}>Disclaimer</div>
+              <div style={{fontSize:'.75rem',color:'var(--text-dim)',lineHeight:1.7}}>
+                This platform is an educational tool developed for BMD5302 Financial Modeling (AY 2025/26 Sem 2) and does not constitute financial advice.
+                All portfolio optimisation results are based on historical price data; past performance is not indicative of future results.
+                Investment involves risk, including the possible loss of principal. Consult a licensed financial adviser before making investment decisions.
+                Short selling involves additional risks including unlimited loss potential and margin requirements.
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {showGoalPlanner && (
+        <GoalPlanner
+          investablePV={investablePV}
+          profileReturn={profileRet}
+          onClose={()=>setShowGoalPlanner(false)}
+          onConfirm={gd=>{ setGoalData(gd); setShowGoalPlanner(false) }}/>
+      )}
+      <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}`}</style>
+    </div>
+  )
+}
+
+const inputStyle = { background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--radius)',color:'var(--text)',fontFamily:"'Syne',sans-serif",fontSize:'.85rem',padding:'6px 10px',outline:'none',width:'100%' }
+const primaryBtn = { fontFamily:"'Syne',sans-serif",display:'inline-flex',alignItems:'center',gap:8,background:'var(--gold)',color:'#000',fontWeight:700,fontSize:'.82rem',letterSpacing:'.06em',textTransform:'uppercase',padding:'12px 22px',borderRadius:99,border:'none',cursor:'pointer' }
+const ghostBtn   = { fontFamily:"'Syne',sans-serif",display:'inline-flex',alignItems:'center',gap:8,background:'transparent',color:'var(--text-muted)',fontWeight:600,fontSize:'.82rem',letterSpacing:'.06em',textTransform:'uppercase',padding:'12px 22px',borderRadius:99,border:'1px solid var(--border2)',cursor:'pointer' }
