@@ -37,69 +37,74 @@ CORS(app)   # allow all origins so React dev server can call the API
 
 # ─── QUESTIONNAIRE ───────────────────────────────────────────────────────────
 QUESTIONS = [
-    {"id":"q1","weight":2.0,"text":"What is your primary investment goal?",
+    {"id":"q1","weight":1.0,"text":"What is your primary investment goal?",
      "options":[
-       {"label":"Maximum capital growth — I want the highest possible returns","score":1},
-       {"label":"Growth with some income along the way","score":2},
-       {"label":"Balanced mix of growth and capital preservation","score":3},
-       {"label":"Steady income with limited exposure to market swings","score":4},
-       {"label":"Preserve my capital above all else","score":5},
+       {"label":"Preservation: I prioritize the absolute safety of your initial capital and seek to minimize any risk of nominal loss, accepting that returns may not significantly outperform inflation.","score":1},
+       {"label":"Income: I seek a portfolio that generates regular, stable cash flows—such as dividends or interest payments—to support current spending needs while maintaining a conservative risk profile.","score":3},
+       {"label":"Growth: I aim for long-term capital appreciation and are willing to accept moderate market fluctuations in exchange for the potential to build significant wealth over time.","score":7},
+       {"label":"Aggressive Growth: I pursue maximum capital gains through high-equity exposure and are comfortable with substantial price volatility and the potential for short-term drawdowns in exchange for superior long-term returns.","score":10},
      ]},
-    {"id":"q2","weight":2.5,"text":"How would you react if your portfolio dropped 25% in a single year?",
+    {"id":"q2","weight":1.0,"text":"Which hypothetical portfolio would you choose?",
      "options":[
-       {"label":"Buy more — a dip is a buying opportunity","score":1},
-       {"label":"Stay the course; I trust the long-term thesis","score":2},
-       {"label":"Feel uneasy but hold my positions","score":3},
-       {"label":"Sell some holdings to reduce further downside","score":4},
-       {"label":"Exit the market and move to cash immediately","score":5},
+       {"label":"100% Bond","score":1},
+       {"label":"70% Bond, 30% Stock","score":4},
+       {"label":"50% Bond, 50% Stock","score":6},
+       {"label":"30% Bond, 70% Stock","score":8},
+       {"label":"100% Stock","score":10},
      ]},
-    {"id":"q3","weight":1.5,"text":"How long can you leave your investments untouched?",
+    {"id":"q3","weight":1.0,"text":"If your portfolio dropped 20% in one month, what would you do?",
      "options":[
-       {"label":"More than 15 years","score":1},
-       {"label":"10 – 15 years","score":2},
-       {"label":"5 – 10 years","score":3},
-       {"label":"2 – 5 years","score":4},
-       {"label":"Less than 2 years","score":5},
+       {"label":"Sell All: Liquidate all assets immediately to prevent further capital loss.","score":1},
+       {"label":"Sell Some: Reduce portfolio exposure by selling a portion of holdings.","score":3},
+       {"label":"Hold: Maintain current positions and wait for a market recovery.","score":7},
+       {"label":"Buy More: Capitalize on lower prices by increasing my investment position.","score":10},
      ]},
-    {"id":"q4","weight":1.5,"text":"What share of your total wealth is this portfolio?",
+    {"id":"q4","weight":1.0,"text":"Are you more afraid of losing principal or losing purchasing power?",
      "options":[
-       {"label":"Less than 10% — this is discretionary money","score":1},
-       {"label":"10 – 25%","score":2},
-       {"label":"25 – 50%","score":3},
-       {"label":"50 – 75%","score":4},
-       {"label":"More than 75% — this is essentially all I have","score":5},
+       {"label":"Principle Safety is Priority: I prioritize capital preservation over growth and cannot tolerate any loss of my original investment.","score":1},
+       {"label":"Balance: I seek a moderate approach that protects my capital while allowing for modest growth to offset rising costs.","score":5},
+       {"label":"Beat Inflation: I am more concerned about losing purchasing power and accept market volatility to achieve higher long-term real returns.","score":10},
      ]},
-    {"id":"q5","weight":2.0,"text":"Which scenario would you prefer?",
+    {"id":"q5","weight":1.0,"text":"What is the most you can tolerate losing in a single year?",
      "options":[
-       {"label":"50% chance of +40%, 50% chance of -20%","score":1},
-       {"label":"50% chance of +25%, 50% chance of -10%","score":2},
-       {"label":"50% chance of +15%, 50% chance of -5%","score":3},
-       {"label":"50% chance of +8%,  50% chance of -2%","score":4},
-       {"label":"Guaranteed return of +3% with no downside","score":5},
+       {"label":"0%","score":1},
+       {"label":"5% - 10%","score":4},
+       {"label":"10% - 25%","score":7},
+       {"label":"> 25%","score":10},
      ]},
-    {"id":"q6","weight":1.0,"text":"How familiar are you with financial markets and investing?",
+    {"id":"q6","weight":1.0,"text":"When do you need to withdraw a significant portion of these funds?",
      "options":[
-       {"label":"Very experienced — I actively manage my own portfolio","score":1},
-       {"label":"Experienced — I understand most financial instruments","score":2},
-       {"label":"Moderate — I know the basics of stocks and bonds","score":3},
-       {"label":"Beginner — I have limited knowledge of investing","score":4},
-       {"label":"No experience — I am new to investing entirely","score":5},
+       {"label":"< 2 years","score":1},
+       {"label":"2-5 years","score":4},
+       {"label":"5-10 years","score":7},
+       {"label":"> 10 years","score":10},
      ]},
-    {"id":"q7","weight":1.5,"text":"How stable is your current income?",
+     {"id":"q7","weight":1.0,"text":"Which of the following best describes the nature and stability of your primary source of income?",
      "options":[
-       {"label":"Very stable — government job, tenured position, etc.","score":1},
-       {"label":"Stable — established career with reliable salary","score":2},
-       {"label":"Moderately stable — some variability (e.g., bonus-heavy)","score":3},
-       {"label":"Variable — freelance or commission-based income","score":4},
-       {"label":"Unstable or no income — unemployed / retired on fixed funds","score":5},
+       {"label":"Unemployed / Retired","score":1},
+       {"label":"Commission-based","score":4},
+       {"label":"Steady Salary","score":8},
+       {"label":"Tenured / Fixed Pension","score":10},
      ]},
-    {"id":"q8","weight":1.0,"text":"Do you have an emergency fund covering at least 6 months of expenses?",
+     {"id":"q8","weight":1.0,"text":"How long could you cover your essential living expenses using only your existing liquid cash reserves, without selling this portfolio?",
      "options":[
-       {"label":"Yes, and more — over 12 months covered","score":1},
-       {"label":"Yes — roughly 6 – 12 months covered","score":2},
-       {"label":"Partially — 3 – 6 months covered","score":3},
-       {"label":"Minimal — less than 3 months","score":4},
-       {"label":"No emergency fund at all","score":5},
+       {"label":"< 1 month","score":1},
+       {"label":"1 - 3 months","score":3},
+       {"label":"3 - 6 months","score":7},
+       {"label":"> 6 months","score":10},
+     ]},
+     {"id":"q9","weight":1.0,"text":"What is the current level of your fixed financial obligations, including debt repayments and dependents?",
+     "options":[
+       {"label":"I have significant debt and several dependents requiring financial support.","score":1},
+       {"label":"I manage moderate debt levels alongside some ongoing dependent responsibilities.","score":4},
+       {"label":"I have minimal debt and few or no financial dependents.","score":8},
+       {"label":"I am entirely debt-free with no external financial dependent obligations.","score":10},
+     ]},
+     {"id":"q10","weight":1.0,"text":"Are you more afraid of losing principal or losing purchasing power?",
+     "options":[
+       {"label":"My goal is time-critical, and I must withdraw the funds exactly as planned regardless of market conditions.","score":1},
+       {"label":"I can delay my goal by one or two years if the market requires time to recover.","score":5},
+       {"label":"My goal is opportunistic, allowing me to wait indefinitely for optimal market conditions before withdrawing.","score":10},
      ]},
 ]
 
@@ -117,6 +122,13 @@ PROFILES = [
 ]
 
 # ─── RISK AVERSION FORMULA ────────────────────────────────────────────────────
+"""
+ToDo: 
+    0. for now we can start with all weight_i = 1.0, w_min = 10, w_max = 100, can assume weighted_sum has been calculated correctly.
+    1. confirm A = 1 is aggressive or conservative
+    2. change A formula 
+    3. remove this comment after above is done
+"""
 def compute_risk_aversion(answers: dict) -> dict:
     """
     answers: { "q1": score_int (1–5), ... }
@@ -125,11 +137,14 @@ def compute_risk_aversion(answers: dict) -> dict:
         raw = Σ (weight_i × score_i)      ∈ [W_min, W_max]
         A   = 1 + 9 × (raw − W_min) / (W_max − W_min)   ∈ [1, 10]
 
-    A = 1  → very aggressive
-    A = 10 → very conservative
+    Task 1: confirm A = 1 is aggressive or conservative
+    A = 1  → very aggressive/conservative
+    A = 10 → very aggressive/conservative
     """
     total_w  = sum(q["weight"] for q in QUESTIONS)
-    w_min, w_max = total_w * 1, total_w * 5
+    w_min, w_max = total_w * 1, total_w * 10
+    # breakdown records each question's contribution to the final score, in current case (all questions weight 1.0) it's just the score
+    # but if we had different weights for different questions, it would show how much each question influenced the final A.
     weighted_sum, breakdown = 0.0, []
 
     for q in QUESTIONS:
@@ -139,7 +154,9 @@ def compute_risk_aversion(answers: dict) -> dict:
         breakdown.append({"question": q["id"], "weight": q["weight"],
                           "score": score, "contribution": round(c, 4)})
 
+    # Task 2: change A formula
     A = round(max(1.0, min(10.0, 1 + 9 * (weighted_sum - w_min) / (w_max - w_min))), 4)
+
     name = col = desc = ""
     for thr, n, c, d in PROFILES:
         if A <= thr: name, col, desc = n, c, d; break

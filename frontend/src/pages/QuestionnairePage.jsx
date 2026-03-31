@@ -111,7 +111,7 @@ export default function QuestionnairePage() {
                 <div style={bulletStyle(selected === idx)}>
                   {selected === idx && <CheckCircle size={12} style={{color:'#000'}}/>}
                 </div>
-                <span style={{fontSize:'.9rem',lineHeight:1.5,textAlign:'left'}}>{label}</span>
+                <span style={{fontFamily:"Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",fontSize:'.9rem',lineHeight:1.5,textAlign:'left'}}>{label}</span>
                 <span style={{marginLeft:'auto',fontFamily:"'IBM Plex Mono',monospace",fontSize:'.7rem',
                   color:selected===idx?'var(--gold)':'var(--text-dim)',minWidth:16}}>{idx + 1}</span>
               </button>
