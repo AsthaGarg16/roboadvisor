@@ -36,13 +36,6 @@ const PROFILE_EXPECTED_RETURN = {
   Balanced:0.07, 'Moderately Conservative':0.055, Conservative:0.04,
 }
 
-const RISK_PROFILES = [
-  { name:'Aggressive',              A:1.5,  std:18, ret:12,  color:'#ef4444' },
-  { name:'Mod. Aggressive',         A:3.0,  std:14, ret:9.5, color:'#f97316' },
-  { name:'Balanced',                A:5.0,  std:10, ret:7,   color:'#eab308' },
-  { name:'Mod. Conservative',       A:7.0,  std:7,  ret:5.5, color:'#22c55e' },
-  { name:'Conservative',            A:9.0,  std:4,  ret:4,   color:'#3b82f6' },
-]
 
 /* ─────────────────────────── HELPERS ───────────────────────────── */
 function rrColor(rr) {
@@ -111,12 +104,11 @@ function DonutChart({ profile }) {
   )
 }
 
-function FundTable({ data, gmvp, profile }) {
+function FundTable({ data, optimalData }) {
   const [tooltip, setTooltip] = useState(null)
   if (!data) return <div style={{color:'var(--text-muted)',fontSize:'.85rem'}}>Portfolio data not loaded.</div>
-  const { fund_names, gmvp_no_short, gmvp_short } = data
-  const gmvpData = profile && profile.includes('Aggressive') ? gmvp_short : gmvp_no_short
-  const weights  = gmvpData?.weights || []
+  const { fund_names } = data
+  const weights  = optimalData?.weights || []
   const returns  = data.returns || []
 
   return (
@@ -184,7 +176,7 @@ function FundTable({ data, gmvp, profile }) {
   )
 }
 
-function FrontierChart({ portfolioData, riskAversion, profile }) {
+function FrontierChart({ portfolioData, riskAversion, profile, optimalData }) {
   if (!portfolioData) return null
   const { frontier_no_short, frontier_short, gmvp_no_short, gmvp_short, fund_names, returns, std_devs } = portfolioData
 
@@ -194,9 +186,10 @@ function FrontierChart({ portfolioData, riskAversion, profile }) {
   const gmvpNS     = [{ x:+(gmvp_no_short.std*100).toFixed(2), y:+(gmvp_no_short.return*100).toFixed(2), name:'GMVP (No Short)', sharpe:gmvp_no_short.sharpe }]
   const gmvpS      = [{ x:+(gmvp_short.std*100).toFixed(2),    y:+(gmvp_short.return*100).toFixed(2),    name:'GMVP (Short)',    sharpe:gmvp_short.sharpe    }]
 
-  // Current profile point
-  const pMatch = RISK_PROFILES.find(p=>p.name.toLowerCase().includes(profile?.split(' ')[0]?.toLowerCase()||''))
-  const profilePt = pMatch ? [{ x:pMatch.std, y:pMatch.ret, name:`You — ${profile}` }] : []
+  // User's actual optimal portfolio point
+  const optimalPt = optimalData
+    ? [{ x:+(optimalData.std*100).toFixed(2), y:+(optimalData.return*100).toFixed(2), name:`You — ${profile}`, sharpe:optimalData.sharpe }]
+    : []
 
   const CustomTip = ({ active, payload }) => {
     if (!active||!payload?.length) return null
@@ -236,14 +229,9 @@ function FrontierChart({ portfolioData, riskAversion, profile }) {
         <Scatter name="GMVP (No Short)" data={gmvpNS} fill="#38bdf8" r={9} shape="diamond"/>
         <Scatter name="GMVP (Short)"    data={gmvpS}  fill="#a78bfa" r={9} shape="diamond"/>
 
-        {/* 5 profile risk points */}
-        {RISK_PROFILES.map(p=>(
-          <Scatter key={p.name} name={p.name} data={[{x:p.std,y:p.ret,name:p.name}]} fill={p.color} r={7} legendType="none"/>
-        ))}
-
-        {/* Current profile — gold highlight */}
-        {profilePt.length>0&&(
-          <Scatter name={`You — ${profile}`} data={profilePt} fill="var(--gold)" r={13} legendType="none"
+        {/* User's optimal portfolio — gold highlight */}
+        {optimalPt.length>0&&(
+          <Scatter name={`You — ${profile}`} data={optimalPt} fill="var(--gold)" r={13} legendType="none"
             shape={props=>{
               const {cx,cy}=props
               return <g><circle cx={cx} cy={cy} r={16} fill="var(--gold)" opacity={.25}/><circle cx={cx} cy={cy} r={9} fill="var(--gold)" stroke="var(--bg)" strokeWidth={2}/></g>
@@ -413,9 +401,18 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
   const [showGoalPlanner, setShowGoalPlanner] = useState(false)
   const [goalData, setGoalData] = useState(null)
   const [expandedSection, setExpandedSection] = useState({ A:true, B:true, C:true, D:true })
+  const [optimalPortfolio, setOptimalPortfolio] = useState(null)
 
   const profile      = data.profile
   const A            = data.risk_aversion
+
+  useEffect(() => {
+    if (!portfolioData || !A) return
+    fetch(`${API}/api/optimal?A=${A}`)
+      .then(r => r.json())
+      .then(d => setOptimalPortfolio(d))
+      .catch(() => {})
+  }, [portfolioData, A])
   const profileRet   = PROFILE_ALLOCATIONS[profile] ? PROFILE_EXPECTED_RETURN[profile] || 0.07 : 0.07
   const alloc        = PROFILE_ALLOCATIONS[profile] || {}
 
@@ -615,18 +612,18 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
 
             {/* C2 — Fund table */}
             <div className="card">
-              <div className="card-title">C2 — Fund Allocation (GMVP Weights)</div>
+              <div className="card-title">C2 — Fund Allocation (Optimal Weights, A = {A.toFixed(2)})</div>
               {portfolioData
-                ? <FundTable data={portfolioData} profile={profile}/>
+                ? <FundTable data={portfolioData} optimalData={optimalPortfolio}/>
                 : <div style={{color:'var(--text-muted)',fontSize:'.85rem',padding:'16px 0'}}>Portfolio data not available. Ensure Flask is running with your Excel files in ./data/.</div>}
             </div>
 
             {/* C3 — Frontier */}
             <div className="card">
               <div className="card-title">C3 — Efficient Frontier</div>
-              <div style={{fontSize:'.78rem',color:'var(--text-muted)',marginBottom:16}}>Your risk profile is highlighted in gold. Five profile points and 10 fund positions are shown.</div>
+              <div style={{fontSize:'.78rem',color:'var(--text-muted)',marginBottom:16}}>Your optimal portfolio (A = {A.toFixed(2)}) is highlighted in gold on the efficient frontier.</div>
               {portfolioData
-                ? <FrontierChart portfolioData={portfolioData} riskAversion={A} profile={profile}/>
+                ? <FrontierChart portfolioData={portfolioData} riskAversion={A} profile={profile} optimalData={optimalPortfolio}/>
                 : <div style={{color:'var(--text-muted)',fontSize:'.85rem',padding:'24px 0',textAlign:'center'}}>Connect Flask backend with fund data to render the frontier.</div>}
             </div>
           </div>
