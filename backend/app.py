@@ -108,6 +108,12 @@ QUESTIONS = [
      ]},
 ]
 
+'''
+ToDo:
+    1. Change to 3 levels in total: Risk Alert, Educational Insight, Risk Profile Aligned
+    2. Check how the score here is used, it should not affect U calculation
+    3. Change color is needed
+'''
 PROFILES = [
     (2.0,  "Aggressive",              "#e74c3c",
      "You have a high appetite for risk and pursue maximum returns. Your portfolio will be heavily weighted toward high-growth, volatile assets."),
