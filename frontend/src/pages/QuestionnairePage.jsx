@@ -71,7 +71,7 @@ export default function QuestionnairePage() {
         <div className="page-eyebrow">Part 2 · Risk Assessment</div>
         <h1 className="page-title">Investor<br/><em style={{color:'var(--gold)'}}>Risk Profile</em></h1>
         <p className="page-sub">
-          Answer 8 questions honestly. Your responses determine your risk aversion coefficient&nbsp;A,
+          Answer 10 questions honestly. Your responses determine your risk aversion coefficient&nbsp;A,
           which personalises your optimal portfolio.
         </p>
       </div>
