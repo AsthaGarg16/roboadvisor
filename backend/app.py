@@ -39,10 +39,10 @@ CORS(app)   # allow all origins so React dev server can call the API
 QUESTIONS = [
     {"id":"q1","weight":1.0,"text":"What is your primary investment goal?",
      "options":[
-       {"label":"Preservation: I prioritize the absolute safety of your initial capital and seek to minimize any risk of nominal loss, accepting that returns may not significantly outperform inflation.","score":1},
-       {"label":"Income: I seek a portfolio that generates regular, stable cash flows—such as dividends or interest payments—to support current spending needs while maintaining a conservative risk profile.","score":3},
-       {"label":"Growth: I aim for long-term capital appreciation and are willing to accept moderate market fluctuations in exchange for the potential to build significant wealth over time.","score":7},
-       {"label":"Aggressive Growth: I pursue maximum capital gains through high-equity exposure and are comfortable with substantial price volatility and the potential for short-term drawdowns in exchange for superior long-term returns.","score":10},
+       {"label":"Preservation:  I prioritize capital safety and aim to minimize loss, accepting that returns may only keep pace with inflation.","score":1},
+       {"label":"Income: Income: I seek stable cash flow from investments while maintaining a conservative level of risk.","score":3},
+       {"label":"Growth: I aim for long-term capital appreciation and accept moderate fluctuations for higher returns.","score":7},
+       {"label":"Aggressive Growth: I target maximum returns and accept high volatility and potential short-term losses.","score":10},
      ]},
     {"id":"q2","weight":1.0,"text":"Which hypothetical portfolio would you choose?",
      "options":[
@@ -61,9 +61,9 @@ QUESTIONS = [
      ]},
     {"id":"q4","weight":1.0,"text":"Are you more afraid of losing principal or losing purchasing power?",
      "options":[
-       {"label":"Principle Safety is Priority: I prioritize capital preservation over growth and cannot tolerate any loss of my original investment.","score":1},
-       {"label":"Balance: I seek a moderate approach that protects my capital while allowing for modest growth to offset rising costs.","score":5},
-       {"label":"Beat Inflation: I am more concerned about losing purchasing power and accept market volatility to achieve higher long-term real returns.","score":10},
+       {"label":"Principle Safety: I prioritize preserving my principal and cannot tolerate losses.","score":1},
+       {"label":"Balance: I seek to protect my capital while allowing modest growth to offset rising costs.","score":5},
+       {"label":"Beat Inflation: I prioritize maintaining purchasing power and accept market volatility for higher long-term returns.","score":10},
      ]},
     {"id":"q5","weight":1.0,"text":"What is the most you can tolerate losing in a single year?",
      "options":[
@@ -90,8 +90,8 @@ QUESTIONS = [
      "options":[
        {"label":"< 1 month","score":1},
        {"label":"1 - 3 months","score":3},
-       {"label":"3 - 6 months","score":7},
-       {"label":"> 6 months","score":10},
+       {"label":"3 - 12 months","score":7},
+       {"label":"> 12 months","score":10},
      ]},
      {"id":"q9","weight":1.0,"text":"What is the current level of your fixed financial obligations, including debt repayments and dependents?",
      "options":[
@@ -100,11 +100,11 @@ QUESTIONS = [
        {"label":"I have minimal debt and few or no financial dependents.","score":8},
        {"label":"I am entirely debt-free with no external financial dependent obligations.","score":10},
      ]},
-     {"id":"q10","weight":1.0,"text":"Are you more afraid of losing principal or losing purchasing power?",
+     {"id":"q10","weight":1.0,"text":"How flexible is your investment goal timing if markets decline?",
      "options":[
-       {"label":"My goal is time-critical, and I must withdraw the funds exactly as planned regardless of market conditions.","score":1},
-       {"label":"I can delay my goal by one or two years if the market requires time to recover.","score":5},
-       {"label":"My goal is opportunistic, allowing me to wait indefinitely for optimal market conditions before withdrawing.","score":10},
+       {"label":"No flexibility: I must meet my goal on schedule, regardless of market conditions. ","score":1},
+       {"label":"Some flexibility: I can delay my goal by a short period if needed.","score":5},
+       {"label":"Very flexible / Optional goal: I can wait indefinitely for favorable market conditions. ","score":10},
      ]},
 ]
 
@@ -134,37 +134,77 @@ def compute_risk_aversion(answers: dict) -> dict:
 
     Higher questionnaire scores indicate stronger risk appetite.
 
+    Split questionnaire into:
+    - Q1–Q5: Risk Willingness (RW)
+    - Q6–Q10: Risk Capability (RC)
+
     Formula:
-        raw = Σ (weight_i × score_i)            ∈ [W_min, W_max]
-        A   = 1 + 9 × (W_max − raw) / (W_max − W_min)   ∈ [1, 10]
+        rw_scores = Σ (weight_i × score_i)              ∈ [1, 10]
+        rc_scores = Σ (weight_i × score_i)              ∈ [1, 10]
+        final_scores = min(rw_scores, rc_scores)        ∈ [1, 10]
+        A   = 11- final_scores                          ∈ [1, 10]
 
     A = 1  → very aggressive  (high score, strong risk appetite)
     A = 10 → very conservative (low score, low risk appetite)
 
     In Markowitz utility U = r − (A/2)σ², higher A = more risk averse.
     """
-    total_w  = sum(q["weight"] for q in QUESTIONS)
-    w_min, w_max = total_w * 1, total_w * 10
-    # breakdown records each question's contribution to the final score, in current case (all questions weight 1.0) it's just the score
-    # but if we had different weights for different questions, it would show how much each question influenced the final A.
-    weighted_sum, breakdown = 0.0, []
+    rw, rc = [], []
 
     for q in QUESTIONS:
         score = int(answers[q["id"]])
-        c = q["weight"] * score
-        weighted_sum += c
-        breakdown.append({"question": q["id"], "weight": q["weight"],
-                          "score": score, "contribution": round(c, 4)})
 
-    A = round(max(1.0, min(10.0, 1 + 9 * (w_max - weighted_sum) / (w_max - w_min))), 4)
+        if q["id"] in ["q1", "q2", "q3", "q4", "q5"]:
+            rw.append(score)
+        else:
+            rc.append(score)
+
+    rw_scores = round(sum(rw) / len(rw), 4)
+    rc_scores = round(sum(rc) / len(rc), 4)
+    final_scores = min(rw_scores, rc_scores)
+    delta = round(rw_scores - rc_scores, 4)
+
+    A = round(11 - final_scores, 4)
+
+    # Decision logic
+    if delta >= 2.0:
+        message = "Risk Alert"
+        explanation = (
+            "Your subjective willingness to take risk exceeds your objective financial capacity. "
+            "To ensure your long-term solvency, the system has capped your risk profile at your maximum financial ability."
+        )
+
+    elif delta <= -2.0:
+        message = "Educational Insight"
+        explanation = (
+            "Your objective financial capacity is significantly higher than your stated willingness to take risk. "
+            "While your portfolio remains conservative for your comfort, please be aware that excessive caution "
+            "may prevent you from achieving long-term capital growth and outperforming inflation."
+        )
+
+    else:
+        message = "Risk Profile Aligned"
+        explanation = (
+            "Your investment attitude is well-synchronized with your objective financial capacity. "
+            "Your portfolio is optimized for both psychological comfort and financial stability."
+        )
 
     name = col = desc = ""
     for thr, n, c, d in PROFILES:
         if A <= thr: name, col, desc = n, c, d; break
 
-    return {"risk_aversion": A, "profile": name, "colour": col, "description": desc,
+    return {"risk_aversion": A,
+            "profile": name,
+            "colour": col,
+            "description": desc,
             "utility_formula": f"U = r - (σ² × {A}) / 2",
-            "raw_weighted_sum": round(weighted_sum, 4), "breakdown": breakdown}
+            "risk_willingness": rw_scores,
+            "risk_capability": rc_scores,
+            "final_risk_score": final_scores,
+            "delta": delta,
+            "assessment": message,
+            "explanation": explanation
+            }
 
 # ─── PORTFOLIO MATH ───────────────────────────────────────────────────────────
 def load_prices() -> pd.DataFrame:
