@@ -4,7 +4,7 @@ import { ArrowRight, Shield, Zap, Target, ClipboardList, TrendingUp } from 'luci
 export default function HomePage() {
   const stats = [
     { value:'10', label:'Funds Analysed' },
-    { value:'10',  label:'Risk Questions' },
+    { value:'8',  label:'Risk Questions' },
     { value:'252×', label:'Annualisation' },
     { value:'2',  label:'Frontier Modes' },
   ]
