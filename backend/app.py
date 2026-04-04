@@ -108,12 +108,6 @@ QUESTIONS = [
      ]},
 ]
 
-'''
-ToDo:
-    1. Change to 3 levels in total: Risk Alert, Educational Insight, Risk Profile Aligned
-    2. Check how the score here is used, it should not affect U calculation
-    3. Change color is needed
-'''
 PROFILES = [
     (2.0,  "Aggressive",              "#e74c3c",
      "You have a high appetite for risk and pursue maximum returns. Your portfolio will be heavily weighted toward high-growth, volatile assets."),
@@ -130,9 +124,7 @@ PROFILES = [
 # ─── RISK AVERSION FORMULA ────────────────────────────────────────────────────
 def compute_risk_aversion(answers: dict) -> dict:
     """
-    answers: { "q1": score_int, ... }
-
-    Higher questionnaire scores indicate stronger risk appetite.
+    answers: { "q1": score_int (1–5), ... }
 
     Split questionnaire into:
     - Q1–Q5: Risk Willingness (RW)
@@ -144,10 +136,8 @@ def compute_risk_aversion(answers: dict) -> dict:
         final_scores = min(rw_scores, rc_scores)        ∈ [1, 10]
         A   = 11- final_scores                          ∈ [1, 10]
 
-    A = 1  → very aggressive  (high score, strong risk appetite)
-    A = 10 → very conservative (low score, low risk appetite)
-
-    In Markowitz utility U = r − (A/2)σ², higher A = more risk averse.
+    A = 1  → very aggressive
+    A = 10 → very conservative
     """
     rw, rc = [], []
 
@@ -277,40 +267,16 @@ def build_frontier(mu, cov, allow_short=False, n=N_FRONTIER):
     return {"std": stds, "ret": rets}
 
 
-def solve_optimal_portfolio(mu, cov, A, allow_short=False):
-    """Maximise U = w'μ − (A/2)·w'Σw  subject to Σw = 1 (and w ≥ 0 if no short)."""
-    n = len(mu)
-    def neg_utility(w):
-        return (A / 2) * float(w @ cov @ w) - float(w @ mu)
-    bounds = None if allow_short else [(0, 1)] * n
-    res = minimize(
-        neg_utility, np.ones(n) / n, method="SLSQP",
-        bounds=bounds,
-        constraints={"type": "eq", "fun": lambda w: np.sum(w) - 1},
-        options={"ftol": 1e-12, "maxiter": 1000},
-    )
-    r, s = port_perf(res.x, mu, cov)
-    return {
-        "weights": res.x.tolist(),
-        "return":  r,
-        "std":     s,
-        "sharpe":  (r - RF_RATE) / s if s > 0 else 0,
-        "utility": round(float(r - (A / 2) * s ** 2), 6),
-    }
-
-
-_cache      = None   # computed once, reused for all subsequent /api/portfolio calls
-_math_cache = None   # stores (mu_a, cov_a) for /api/optimal
+_cache = None   # computed once, reused for all subsequent /api/portfolio calls
 
 
 def get_portfolio_data():
-    global _cache, _math_cache
+    global _cache
     if _cache:
         return _cache
     prices       = load_prices()
     mu, cov, corr = compute_stats(prices)
     mu_a, cov_a  = mu.values, cov.values
-    _math_cache  = (mu_a, cov_a)
     _cache = {
         "fund_names":        list(mu.index),
         "returns":           mu_a.tolist(),
@@ -345,23 +311,6 @@ def api_score():
     except (KeyError, IndexError) as e:
         return jsonify({"error": str(e)}), 400
     return jsonify(compute_risk_aversion(score_map))
-
-
-@app.route("/api/optimal")
-def api_optimal():
-    try:
-        A_val       = float(request.args.get("A", 5.0))
-        allow_short = request.args.get("short", "false").lower() == "true"
-        A_val       = max(1.0, min(10.0, A_val))
-        if _math_cache is None:
-            get_portfolio_data()   # warm the cache
-        mu_a, cov_a = _math_cache
-        return jsonify(solve_optimal_portfolio(mu_a, cov_a, A_val, allow_short=allow_short))
-    except FileNotFoundError as e:
-        return jsonify({"error": str(e)}), 404
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/portfolio")

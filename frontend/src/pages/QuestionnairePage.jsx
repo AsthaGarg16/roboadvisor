@@ -71,7 +71,7 @@ export default function QuestionnairePage() {
         <div className="page-eyebrow">Part 2 · Risk Assessment</div>
         <h1 className="page-title">Investor<br/><em style={{color:'var(--gold)'}}>Risk Profile</em></h1>
         <p className="page-sub">
-          Answer 10 questions honestly. Your responses determine your risk aversion coefficient&nbsp;A,
+          Answer 8 questions honestly. Your responses determine your risk aversion coefficient&nbsp;A,
           which personalises your optimal portfolio.
         </p>
       </div>
@@ -111,7 +111,7 @@ export default function QuestionnairePage() {
                 <div style={bulletStyle(selected === idx)}>
                   {selected === idx && <CheckCircle size={12} style={{color:'#000'}}/>}
                 </div>
-                <span style={{fontFamily:"Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",fontSize:'.9rem',lineHeight:1.5,textAlign:'left'}}>{label}</span>
+                <span style={{fontSize:'.9rem',lineHeight:1.5,textAlign:'left'}}>{label}</span>
                 <span style={{marginLeft:'auto',fontFamily:"'IBM Plex Mono',monospace",fontSize:'.7rem',
                   color:selected===idx?'var(--gold)':'var(--text-dim)',minWidth:16}}>{idx + 1}</span>
               </button>
