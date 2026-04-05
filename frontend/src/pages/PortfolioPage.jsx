@@ -6,7 +6,7 @@ import {
 } from 'recharts'
 import { RefreshCw, TrendingUp, BarChart2, Grid, Info } from 'lucide-react'
 
-const API = 'http://localhost:5000'
+const API = 'http://localhost:5001'
 
 /* ── colour palette for 10 funds ── */
 const FUND_COLORS = [

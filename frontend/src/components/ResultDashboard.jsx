@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 
 /* ─────────────────────────── CONSTANTS ─────────────────────────── */
-const API = 'http://localhost:5000'
+const API = 'http://localhost:5001'
 
 const FUND_COLORS = [
   '#c9a84c','#38bdf8','#4ade80','#f87171','#a78bfa',
@@ -422,7 +422,7 @@ function CovarianceHeatmap({ matrix, labels }) {
           : 'Hover a cell for exact value'}
       </div>
       <div style={{overflowX:'auto'}}>
-        <div style={{display:'inline-block',minWidth:(n+1)*cellSize}}>
+        <div style={{display:'inline-block',minWidth:(n+1)*cellSize}} onMouseLeave={()=>setHovered(null)}>
           <div style={{display:'flex',marginLeft:cellSize}}>
             {labels.map(l=>(
               <div key={l} style={{width:cellSize,minWidth:cellSize,fontSize:8,color:'var(--text-muted)',textAlign:'center',fontFamily:"'IBM Plex Mono',monospace",overflow:'hidden',whiteSpace:'nowrap'}}>
@@ -438,17 +438,20 @@ function CovarianceHeatmap({ matrix, labels }) {
               {row.map((v,j)=>(
                 <div key={j}
                   onMouseEnter={()=>setHovered({i,j})}
-                  onMouseLeave={()=>setHovered(null)}
                   style={{
                     width:cellSize,height:cellSize,minWidth:cellSize,
                     background:getColor(v),
-                    border:isHov(i,j)?'1px solid var(--gold)':'1px solid var(--surface)',
+                    border: hovered && hovered.i===i && hovered.j===j
+                      ? '1.5px solid var(--gold)'
+                      : isHov(i,j)
+                        ? '1px solid rgba(201,168,76,0.45)'
+                        : '1px solid var(--surface)',
                     display:'flex',alignItems:'center',justifyContent:'center',
                     fontSize:7,color:'var(--text-muted)',
                     fontFamily:"'IBM Plex Mono',monospace",cursor:'crosshair',
-                    transform:isHov(i,j)?'scale(1.08)':'scale(1)',
-                    transition:'transform .1s,border .1s',
-                    position:'relative',zIndex:isHov(i,j)?2:0,
+                    opacity: hovered && !isHov(i,j) ? 0.45 : 1,
+                    transition:'opacity .12s,border .08s',
+                    boxSizing:'border-box',
                   }}>
                   {cellSize>40?v.toFixed(4):''}
                 </div>

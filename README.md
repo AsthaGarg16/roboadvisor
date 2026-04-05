@@ -177,7 +177,7 @@ cd backend && source venv/bin/activate && python app.py
 cd backend && venv\Scripts\activate && python app.py
 ```
 
-The API is available at **http://localhost:5000**.
+The API is available at **http://localhost:5001**.
 
 ### 4 — Start the frontend
 

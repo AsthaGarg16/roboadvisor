@@ -6,7 +6,7 @@ import {
 } from 'recharts'
 import { BarChart2, TrendingUp, Grid, Activity, RefreshCw } from 'lucide-react'
 
-const API = 'http://localhost:5000'
+const API = 'http://localhost:5001'
 
 const FUND_COLORS = [
   '#c9a84c','#38bdf8','#4ade80','#f87171','#a78bfa',

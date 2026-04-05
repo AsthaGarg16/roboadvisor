@@ -30,12 +30,23 @@ def load_prices() -> pd.DataFrame:
     for fp in files:
         name = os.path.splitext(os.path.basename(fp))[0]
         df   = pd.read_excel(fp, header=0)
+        if df.empty:
+            print(f"[load_prices] skipping {name}: file has no rows")
+            continue
         s    = pd.Series(
             pd.to_numeric(df.iloc[:, PRICE_COL], errors="coerce").values,
             index=pd.to_datetime(df.iloc[:, DATE_COL], errors="coerce"),
             name=name,
         ).dropna()
+        if s.empty:
+            print(f"[load_prices] skipping {name}: no valid price data after parsing")
+            continue
         series.append(s)
+    if not series:
+        raise FileNotFoundError(
+            f"No usable data found in '{os.path.abspath(FOLDER)}'. "
+            "Run fetch_data.py first to download fund data."
+        )
     return pd.concat(series, axis=1).sort_index().dropna()
 
 
