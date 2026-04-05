@@ -134,6 +134,7 @@ roboadvisor/
 │   ├── package.json
 │   └── vite.config.js
 │
+├── setup.py               ← one-command setup (cross-platform)
 └── README.md
 ```
 
@@ -149,7 +150,15 @@ roboadvisor/
 | Node.js | 18          | `node --version` |
 | npm     | 9           | `npm --version` |
 
-### 1 — Get fund data
+### 1 — Install dependencies
+
+Run the setup script from the repo root. It creates a Python virtual environment under `backend/venv/` and runs `npm install` for the frontend — works on Mac, Linux, and Windows.
+
+```bash
+python setup.py
+```
+
+### 2 — Get fund data
 
 ```bash
 cd backend
@@ -158,21 +167,22 @@ python fetch_data.py        # downloads price data into ./data/
 
 Or copy your own `.xlsx` files into `backend/data/` (column 0 = Date, column 1 = Price).
 
-### 2 — Run the backend
+### 3 — Start the backend
 
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate    # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python app.py               # → http://localhost:5000
+# Mac / Linux
+cd backend && source venv/bin/activate && python app.py
+
+# Windows
+cd backend && venv\Scripts\activate && python app.py
 ```
 
-### 3 — Run the frontend
+The API is available at **http://localhost:5000**.
+
+### 4 — Start the frontend
 
 ```bash
 cd frontend
-npm install
 npm run dev                 # → http://localhost:5173
 ```
 
