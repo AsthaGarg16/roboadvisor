@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import ResultDashboard from '../components/ResultDashboard'
 
-const API = 'http://localhost:5000'
+const API = 'http://localhost:5001'
 
 export default function QuestionnairePage() {
   const [questions,     setQuestions]     = useState([])
