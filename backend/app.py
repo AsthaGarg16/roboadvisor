@@ -123,18 +123,27 @@ PROFILES = [
 # ─── RISK AVERSION ───────────────────────────────────────────────────────────
 def compute_risk_aversion(answers: dict) -> dict:
     rw, rc = [], []
+    breakdown = []
     for q in QUESTIONS:
         score = int(answers[q["id"]])
+        weight = round(1 / 5, 4)
+        breakdown.append({
+            "question":     q["id"],
+            "weight":       weight,
+            "score":        score,
+            "contribution": round(weight * score, 4),
+        })
         if q["id"] in ["q1", "q2", "q3", "q4", "q5"]:
             rw.append(score)
         else:
             rc.append(score)
 
-    rw_scores    = round(sum(rw) / len(rw), 4)
-    rc_scores    = round(sum(rc) / len(rc), 4)
-    final_scores = min(rw_scores, rc_scores)
-    delta        = round(rw_scores - rc_scores, 4)
-    A            = round(11 - final_scores, 4)
+    rw_scores        = round(sum(rw) / len(rw), 4)
+    rc_scores        = round(sum(rc) / len(rc), 4)
+    final_scores     = min(rw_scores, rc_scores)
+    raw_weighted_sum = round(sum(b["contribution"] for b in breakdown), 4)
+    delta            = round(rw_scores - rc_scores, 4)
+    A                = round(11 - final_scores, 4)
 
     if delta >= 2.0:
         message     = "Risk Alert"
@@ -171,6 +180,8 @@ def compute_risk_aversion(answers: dict) -> dict:
         "risk_willingness": rw_scores,
         "risk_capability":  rc_scores,
         "final_risk_score": final_scores,
+        "raw_weighted_sum": raw_weighted_sum,
+        "breakdown":        breakdown,
         "delta":            delta,
         "assessment":       message,
         "explanation":      explanation,

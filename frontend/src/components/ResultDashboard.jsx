@@ -577,7 +577,7 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                   ))}
                 </tr></thead>
                 <tbody>
-                  {data.breakdown.map((row,i)=>(
+                  {(data.breakdown || []).map((row,i)=>(
                     <tr key={i} style={{borderBottom:'1px solid var(--border)'}}>
                       <td style={{padding:'7px 10px',color:'var(--text-muted)',fontFamily:'monospace'}}>{row.question.toUpperCase()}</td>
                       <td style={{padding:'7px 10px',fontFamily:'monospace'}}>{row.weight}×</td>
