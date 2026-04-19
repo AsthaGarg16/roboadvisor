@@ -60,13 +60,13 @@ function RiskGauge({ A }) {
   const pct = ((A - 1) / 9) * 100
   return (
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',fontSize:'.68rem',color:'var(--text-muted)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:8}}>
+      <div style={{display:'flex',justifyContent:'space-between',fontSize:'.81rem',color:'var(--text-muted)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:8}}>
         <span>Aggressive (A=1)</span><span>Conservative (A=10)</span>
       </div>
       <div style={{height:10,borderRadius:99,background:'linear-gradient(90deg,#ef4444 0%,#f97316 25%,#eab308 50%,#22c55e 75%,#3b82f6 100%)',position:'relative'}}>
         <div style={{position:'absolute',top:'50%',left:`${pct}%`,transform:'translate(-50%,-50%)',width:20,height:20,borderRadius:'50%',background:'var(--text)',border:'3px solid var(--bg)',boxShadow:'0 0 0 3px var(--gold)',transition:'left 1s cubic-bezier(.34,1.56,.64,1)'}}/>
       </div>
-      <div style={{display:'flex',justifyContent:'space-between',marginTop:8,fontSize:'.72rem',fontFamily:"'IBM Plex Mono',monospace",color:'var(--text-muted)'}}>
+      <div style={{display:'flex',justifyContent:'space-between',marginTop:8,fontSize:'.85rem',fontFamily:"'IBM Plex Mono',monospace",color:'var(--text-muted)'}}>
         {[1,2,3,4,5,6,7,8,9,10].map(n=><span key={n} style={{color:Math.abs(A-n)<0.5?'var(--gold)':'var(--text-dim)'}}>{n}</span>)}
       </div>
     </div>
@@ -85,7 +85,7 @@ function DonutChart({ profile }) {
             {data.map((d,i)=><Cell key={d.name} fill={DONUT_COLORS[d.name]||FUND_COLORS[i]}/>)}
           </Pie>
           <RTooltip
-            contentStyle={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,fontSize:'.78rem'}}
+            contentStyle={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,fontSize:'.9rem'}}
             formatter={(v,n)=>[`${v}%`,n]}/>
         </PieChart>
       </ResponsiveContainer>
@@ -93,11 +93,11 @@ function DonutChart({ profile }) {
         {data.map(d=>(
           <div key={d.name} style={{display:'flex',alignItems:'center',gap:10}}>
             <div style={{width:10,height:10,borderRadius:'50%',background:DONUT_COLORS[d.name],flexShrink:0}}/>
-            <span style={{fontSize:'.8rem',flex:1}}>{d.name}</span>
+            <span style={{fontSize:'.93rem',flex:1}}>{d.name}</span>
             <div style={{height:6,width:80,background:'var(--border)',borderRadius:99,overflow:'hidden'}}>
               <div style={{height:'100%',width:`${d.value}%`,background:DONUT_COLORS[d.name],borderRadius:99}}/>
             </div>
-            <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:'.78rem',color:'var(--text-muted)',minWidth:32,textAlign:'right'}}>{d.value}%</span>
+            <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:'.9rem',color:'var(--text-muted)',minWidth:32,textAlign:'right'}}>{d.value}%</span>
           </div>
         ))}
       </div>
@@ -107,18 +107,18 @@ function DonutChart({ profile }) {
 
 function FundTable({ data, optimalData }) {
   const [tooltip, setTooltip] = useState(null)
-  if (!data) return <div style={{color:'var(--text-muted)',fontSize:'.85rem'}}>Portfolio data not loaded.</div>
+  if (!data) return <div style={{color:'var(--text-muted)',fontSize:'.98rem'}}>Portfolio data not loaded.</div>
   const { fund_names } = data
   const weights  = optimalData?.weights || []
   const returns  = data.returns || []
 
   return (
     <div style={{overflowX:'auto',position:'relative'}}>
-      <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.8rem'}}>
+      <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.93rem'}}>
         <thead>
           <tr style={{borderBottom:'1px solid var(--border)'}}>
             {['#','Fund','Exp. Return','Weight','Allocation','Position'].map(h=>(
-              <th key={h} style={{textAlign:'left',padding:'8px 12px',color:'var(--text-muted)',fontSize:'.68rem',textTransform:'uppercase',letterSpacing:'.08em',fontWeight:500}}>{h}</th>
+              <th key={h} style={{textAlign:'left',padding:'8px 12px',color:'var(--text-muted)',fontSize:'.81rem',textTransform:'uppercase',letterSpacing:'.08em',fontWeight:500}}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -151,7 +151,7 @@ function FundTable({ data, optimalData }) {
                 <td style={{padding:'10px 12px'}}>
                   <div style={{position:'relative',display:'inline-block'}}>
                     <span style={{
-                      fontSize:'.68rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',
+                      fontSize:'.81rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',
                       padding:'2px 8px',borderRadius:99,border:'1px solid',cursor: isShort?'help':'default',
                       color:isShort?'#f87171':'#4ade80', borderColor:isShort?'rgba(248,113,113,.4)':'rgba(74,222,128,.4)',
                       background:isShort?'rgba(248,113,113,.08)':'rgba(74,222,128,.08)',
@@ -161,7 +161,7 @@ function FundTable({ data, optimalData }) {
                       {isShort?'Short':'Long'}
                     </span>
                     {tooltip===i&&(
-                      <div style={{position:'absolute',bottom:'130%',left:'50%',transform:'translateX(-50%)',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px',width:220,fontSize:'.75rem',lineHeight:1.6,color:'var(--text-muted)',zIndex:99,boxShadow:'0 8px 24px rgba(0,0,0,.4)'}}>
+                      <div style={{position:'absolute',bottom:'130%',left:'50%',transform:'translateX(-50%)',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px',width:220,fontSize:'.88rem',lineHeight:1.6,color:'var(--text-muted)',zIndex:99,boxShadow:'0 8px 24px rgba(0,0,0,.4)'}}>
                         <div style={{color:'var(--text)',fontWeight:600,marginBottom:4}}>Short Selling</div>
                         Borrowing and selling this fund expecting its price to fall. Profits if it declines; losses if it rises. Requires margin and carries higher risk.
                       </div>
@@ -196,8 +196,8 @@ function FrontierChart({ portfolioData, riskAversion, profile, optimalData }) {
     if (!active||!payload?.length) return null
     const d = payload[0]?.payload
     return (
-      <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px',fontSize:'.75rem',fontFamily:"'IBM Plex Mono',monospace"}}>
-        {d.name&&<div style={{color:'var(--gold)',marginBottom:4,fontFamily:"'Syne',sans-serif",fontWeight:600}}>{d.name}</div>}
+      <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px',fontSize:'.88rem',fontFamily:"'IBM Plex Mono',monospace"}}>
+        {d.name&&<div style={{color:'var(--gold)',marginBottom:4,fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>{d.name}</div>}
         <div style={{color:'var(--text-muted)'}}>σ <span style={{color:'var(--text)'}}>{(+d.x).toFixed(2)}%</span></div>
         <div style={{color:'var(--text-muted)'}}>r <span style={{color:'var(--text)'}}>{(+d.y).toFixed(2)}%</span></div>
         {d.sharpe!==undefined&&<div style={{color:'var(--text-muted)'}}>Sharpe <span style={{color:'var(--gold)'}}>{(+d.sharpe).toFixed(3)}</span></div>}
@@ -239,7 +239,7 @@ function FrontierChart({ portfolioData, riskAversion, profile, optimalData }) {
             }}/>
         )}
 
-        <Legend wrapperStyle={{fontSize:'.72rem',color:'var(--text-muted)',paddingTop:12}}/>
+        <Legend wrapperStyle={{fontSize:'.85rem',color:'var(--text-muted)',paddingTop:12}}/>
       </ScatterChart>
     </ResponsiveContainer>
   )
@@ -279,28 +279,28 @@ function GoalPlanner({ investablePV, profileReturn, onClose, onConfirm }) {
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:24}} onClick={onClose}>
       <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--radius-lg)',width:'min(720px,100%)',maxHeight:'85vh',overflowY:'auto',padding:'32px'}} onClick={e=>e.stopPropagation()}>
-        <div style={{fontFamily:"'Lora',serif",fontSize:'1.4rem',marginBottom:6}}>Financial Goal Planner</div>
-        <div style={{fontSize:'.82rem',color:'var(--text-muted)',marginBottom:24}}>Define your goals. Planned goals share your investable capital equally for the required-return calculation.</div>
+        <div style={{fontFamily:"'Lora',serif",fontSize:'1.53rem',marginBottom:6}}>Financial Goal Planner</div>
+        <div style={{fontSize:'.95rem',color:'var(--text-muted)',marginBottom:24}}>Define your goals. Planned goals share your investable capital equally for the required-return calculation.</div>
 
         {/* Investable PV */}
         <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:24,padding:'14px 18px',background:'var(--surface2)',borderRadius:'var(--radius)',border:'1px solid var(--border)'}}>
           <div style={{flex:1}}>
-            <div style={{fontSize:'.72rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}}>Investable Capital (PV)</div>
+            <div style={{fontSize:'.85rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}}>Investable Capital (PV)</div>
             <input type="number" value={investablePV} readOnly
-              style={{background:'transparent',border:'none',color:'var(--gold)',fontFamily:"'IBM Plex Mono',monospace",fontSize:'1.1rem',width:'100%',outline:'none'}}/>
+              style={{background:'transparent',border:'none',color:'var(--gold)',fontFamily:"'IBM Plex Mono',monospace",fontSize:'1.23rem',width:'100%',outline:'none'}}/>
           </div>
           <div style={{textAlign:'right'}}>
-            <div style={{fontSize:'.72rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}}>Profile Exp. Return</div>
+            <div style={{fontSize:'.85rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}}>Profile Exp. Return</div>
             <div style={{fontFamily:"'IBM Plex Mono',monospace",color:'#4ade80'}}>{(profileReturn*100).toFixed(1)}% p.a.</div>
           </div>
         </div>
 
         {/* Goals table */}
-        <table style={{width:'100%',borderCollapse:'collapse',marginBottom:16,fontSize:'.8rem'}}>
+        <table style={{width:'100%',borderCollapse:'collapse',marginBottom:16,fontSize:'.93rem'}}>
           <thead>
             <tr style={{borderBottom:'1px solid var(--border)'}}>
               {['Goal','Horizon (yrs)','Target FV ($)','Planned?','Req. Return',''].map(h=>(
-                <th key={h} style={{textAlign:'left',padding:'6px 10px',color:'var(--text-muted)',fontSize:'.68rem',textTransform:'uppercase',letterSpacing:'.08em'}}>{h}</th>
+                <th key={h} style={{textAlign:'left',padding:'6px 10px',color:'var(--text-muted)',fontSize:'.81rem',textTransform:'uppercase',letterSpacing:'.08em'}}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -318,14 +318,14 @@ function GoalPlanner({ investablePV, profileReturn, onClose, onConfirm }) {
                   </td>
                   <td style={{padding:'8px 10px'}}>
                     {g.planned && rrc ? (
-                      <span style={{color:rrc.text,fontFamily:"'IBM Plex Mono',monospace",fontSize:'.8rem',display:'flex',alignItems:'center',gap:4}}>
+                      <span style={{color:rrc.text,fontFamily:"'IBM Plex Mono',monospace",fontSize:'.93rem',display:'flex',alignItems:'center',gap:4}}>
                         {g.rr.toFixed(1)}% {rrc.urgent&&<AlertTriangle size={12}/>}
-                        <span style={{fontSize:'.68rem',marginLeft:4,opacity:.8}}>{rrc.label}</span>
+                        <span style={{fontSize:'.81rem',marginLeft:4,opacity:.8}}>{rrc.label}</span>
                       </span>
-                    ) : <span style={{color:'var(--text-dim)',fontSize:'.75rem'}}>Unplanned</span>}
+                    ) : <span style={{color:'var(--text-dim)',fontSize:'.88rem'}}>Unplanned</span>}
                   </td>
                   <td style={{padding:'8px 10px'}}>
-                    <button onClick={()=>removeGoal(g.id)} style={{background:'none',border:'none',color:'var(--text-dim)',cursor:'pointer',fontSize:'1rem',lineHeight:1}}>×</button>
+                    <button onClick={()=>removeGoal(g.id)} style={{background:'none',border:'none',color:'var(--text-dim)',cursor:'pointer',fontSize:'1.13rem',lineHeight:1}}>×</button>
                   </td>
                 </tr>
               )
@@ -333,16 +333,16 @@ function GoalPlanner({ investablePV, profileReturn, onClose, onConfirm }) {
           </tbody>
         </table>
 
-        <button onClick={addGoal} style={{...ghostBtn,marginBottom:24,fontSize:'.78rem'}}>+ Add Goal</button>
+        <button onClick={addGoal} style={{...ghostBtn,marginBottom:24,fontSize:'.9rem'}}>+ Add Goal</button>
 
         {/* WRR summary */}
         <div style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:'16px 20px',marginBottom:20}}>
-          <div style={{fontSize:'.72rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:8}}>Weighted Required Return (WRR)</div>
+          <div style={{fontSize:'.85rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:8}}>Weighted Required Return (WRR)</div>
           <div style={{display:'flex',alignItems:'baseline',gap:12}}>
-            <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'2.2rem',color:rrColor(wrr).text}}>{wrr.toFixed(2)}%</div>
+            <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'2.33rem',color:rrColor(wrr).text}}>{wrr.toFixed(2)}%</div>
             <div>
-              <span style={{fontSize:'.82rem',fontWeight:600,color:rrColor(wrr).text}}>{rrColor(wrr).icon} {rrColor(wrr).label}</span>
-              {wrr>10&&<div style={{fontSize:'.75rem',color:'var(--text-muted)',marginTop:2}}>Profile expected return: {(profileReturn*100).toFixed(1)}%. Gap: {(wrr-profileReturn*100).toFixed(1)}pp</div>}
+              <span style={{fontSize:'.95rem',fontWeight:600,color:rrColor(wrr).text}}>{rrColor(wrr).icon} {rrColor(wrr).label}</span>
+              {wrr>10&&<div style={{fontSize:'.88rem',color:'var(--text-muted)',marginTop:2}}>Profile expected return: {(profileReturn*100).toFixed(1)}%. Gap: {(wrr-profileReturn*100).toFixed(1)}pp</div>}
             </div>
           </div>
         </div>
@@ -365,7 +365,7 @@ async function downloadPDF(data, goalData, profile) {
   <style>body{font-family:Georgia,serif;padding:40px;color:#111;max-width:800px;margin:auto}
   h1{font-size:2rem;margin-bottom:4px}h2{font-size:1.2rem;border-bottom:2px solid #c9a84c;padding-bottom:6px;margin-top:32px}
   table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #ddd}
-  th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#666}
+  th{font-size:.88rem;text-transform:uppercase;letter-spacing:.06em;color:#666}
   .badge{display:inline-block;padding:4px 12px;border-radius:99px;font-size:.8rem;font-weight:600;background:#c9a84c;color:#000}
   .disclaimer{font-size:.72rem;color:#999;margin-top:48px;border-top:1px solid #eee;padding-top:16px;line-height:1.6}
   @media print{body{padding:20px}}</style></head><body>
@@ -416,7 +416,7 @@ function CovarianceHeatmap({ matrix, labels }) {
 
   return (
     <div>
-      <div style={{minHeight:24,marginBottom:8,fontSize:'.75rem',fontFamily:"'IBM Plex Mono',monospace",color:hovered?'var(--text)':'var(--text-muted)'}}>
+      <div style={{minHeight:24,marginBottom:8,fontSize:'.88rem',fontFamily:"'IBM Plex Mono',monospace",color:hovered?'var(--text)':'var(--text-muted)'}}>
         {hovered
           ? <><span style={{color:'var(--gold)'}}>{labels[hovered.i]}</span> × <span style={{color:'var(--gold)'}}>{labels[hovered.j]}</span>  →  {matrix[hovered.i][hovered.j].toFixed(6)}</>
           : 'Hover a cell for exact value'}
@@ -460,7 +460,7 @@ function CovarianceHeatmap({ matrix, labels }) {
           ))}
         </div>
       </div>
-      <div style={{display:'flex',alignItems:'center',gap:8,marginTop:10,fontSize:'.7rem',color:'var(--text-muted)'}}>
+      <div style={{display:'flex',alignItems:'center',gap:8,marginTop:10,fontSize:'.83rem',color:'var(--text-muted)'}}>
         <div style={{width:70,height:7,borderRadius:4,background:'linear-gradient(90deg,rgba(248,113,113,.8),var(--surface2),rgba(201,168,76,.85))'}}/>
         <span>Negative covariance</span><span style={{marginLeft:'auto'}}>Positive covariance</span>
       </div>
@@ -508,8 +508,8 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
     <button onClick={()=>toggle(key)} style={{width:'100%',background:'none',border:'none',cursor:'pointer',textAlign:'left',padding:0,marginBottom:expandedSection[key]?20:0}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'18px 0',borderBottom:'1px solid var(--border)'}}>
         <div>
-          <div style={{fontSize:'.68rem',color:'var(--gold)',letterSpacing:'.14em',textTransform:'uppercase',fontFamily:"'IBM Plex Mono',monospace",marginBottom:4}}>{eyebrow}</div>
-          <div style={{fontFamily:"'Lora',serif",fontSize:'1.25rem',color:'var(--text)'}}>{label}</div>
+          <div style={{fontSize:'.81rem',color:'var(--gold)',letterSpacing:'.14em',textTransform:'uppercase',fontFamily:"'IBM Plex Mono',monospace",marginBottom:4}}>{eyebrow}</div>
+          <div style={{fontFamily:"'Lora',serif",fontSize:'1.38rem',color:'var(--text)'}}>{label}</div>
         </div>
         {expandedSection[key]?<ChevronUp size={18} color="var(--text-muted)"/>:<ChevronDown size={18} color="var(--text-muted)"/>}
       </div>
@@ -523,11 +523,11 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
       <div style={{background:data.colour,borderRadius:'var(--radius-lg)',padding:'32px 36px',position:'relative',overflow:'hidden',marginBottom:24}}>
         <div style={{position:'absolute',right:36,top:'50%',transform:'translateY(-50%)',fontFamily:"'Lora',serif",fontSize:'6rem',fontStyle:'italic',opacity:.14,color:'#fff',lineHeight:1,pointerEvents:'none'}}>A={A}</div>
         <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:6}}>
-          <div style={{fontSize:'.72rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(255,255,255,.75)'}}>Your Risk Profile</div>
-          <span style={{fontSize:'.68rem',background:'rgba(255,255,255,.2)',color:'#fff',padding:'2px 10px',borderRadius:99,letterSpacing:'.08em'}}>A = {A.toFixed(2)}</span>
+          <div style={{fontSize:'.85rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(255,255,255,.75)'}}>Your Risk Profile</div>
+          <span style={{fontSize:'.81rem',background:'rgba(255,255,255,.2)',color:'#fff',padding:'2px 10px',borderRadius:99,letterSpacing:'.08em'}}>A = {A.toFixed(2)}</span>
         </div>
-        <div style={{fontFamily:"'Lora',serif",fontSize:'2.2rem',color:'#fff',fontWeight:500}}>{profile}</div>
-        <div style={{fontSize:'.85rem',color:'rgba(255,255,255,.75)',marginTop:8,maxWidth:480}}>{data.description}</div>
+        <div style={{fontFamily:"'Lora',serif",fontSize:'2.33rem',color:'#fff',fontWeight:500}}>{profile}</div>
+        <div style={{fontSize:'.98rem',color:'rgba(255,255,255,.75)',marginTop:8,maxWidth:480}}>{data.description}</div>
       </div>
 
       {/* ══ BAND A — RISK ASSESSMENT ════════════════════════════════ */}
@@ -547,33 +547,33 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                 { label:'Exp. Return',      value:`${(profileRet*100).toFixed(1)}%`, sub:'Profile benchmark' },
               ].map(m=>(
                 <div key={m.label} className="card" style={{textAlign:'center',padding:'20px 16px'}}>
-                  <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'1.9rem',color:'var(--text)'}}>{m.value}</div>
-                  <div style={{fontSize:'.68rem',textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text-muted)',marginTop:4}}>{m.label}</div>
-                  <div style={{fontSize:'.7rem',color:'var(--text-dim)',marginTop:2}}>{m.sub}</div>
+                  <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'2.03rem',color:'var(--text)'}}>{m.value}</div>
+                  <div style={{fontSize:'.81rem',textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text-muted)',marginTop:4}}>{m.label}</div>
+                  <div style={{fontSize:'.83rem',color:'var(--text-dim)',marginTop:2}}>{m.sub}</div>
                 </div>
               ))}
             </div>
 
             {/* Utility formula */}
-            <div style={{textAlign:'center',padding:'14px',border:'1px dashed var(--gold-dim)',borderRadius:'var(--radius)',fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'1.1rem',color:'var(--gold)'}}>
+            <div style={{textAlign:'center',padding:'14px',border:'1px dashed var(--gold-dim)',borderRadius:'var(--radius)',fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'1.23rem',color:'var(--gold)'}}>
               {data.utility_formula}
             </div>
 
             {/* Evaluation alert */}
             <div style={{display:'flex',alignItems:'flex-start',gap:12,padding:'14px 18px',borderRadius:'var(--radius)',background:alert.bg,border:`1px solid ${alert.border}`}}>
               <div style={{color:alert.color,marginTop:2,flexShrink:0}}>{alert.icon}</div>
-              <div style={{fontSize:'.85rem',color:alert.color,lineHeight:1.55}}>{alert.msg}</div>
+              <div style={{fontSize:'.98rem',color:alert.color,lineHeight:1.55}}>{alert.msg}</div>
             </div>
 
             {/* Answer breakdown */}
             <details className="card" style={{padding:'20px 28px'}}>
-              <summary style={{cursor:'pointer',fontSize:'.78rem',color:'var(--text-muted)',letterSpacing:'.08em',textTransform:'uppercase',userSelect:'none',fontFamily:"'IBM Plex Mono',monospace"}}>
+              <summary style={{cursor:'pointer',fontSize:'.9rem',color:'var(--text-muted)',letterSpacing:'.08em',textTransform:'uppercase',userSelect:'none',fontFamily:"'IBM Plex Mono',monospace"}}>
                 ▶ Answer Breakdown
               </summary>
-              <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.8rem',marginTop:14}}>
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.93rem',marginTop:14}}>
                 <thead><tr style={{borderBottom:'1px solid var(--border)'}}>
                   {['Q','Weight','Score','Contribution'].map(h=>(
-                    <th key={h} style={{textAlign:'left',padding:'6px 10px',color:'var(--text-muted)',fontSize:'.68rem',textTransform:'uppercase',letterSpacing:'.08em'}}>{h}</th>
+                    <th key={h} style={{textAlign:'left',padding:'6px 10px',color:'var(--text-muted)',fontSize:'.81rem',textTransform:'uppercase',letterSpacing:'.08em'}}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>
@@ -603,10 +603,10 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
               <div className="card-title">Investable Capital</div>
               <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
                 <div>
-                  <div style={{fontSize:'.72rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:6}}>Current Investable PV ($)</div>
+                  <div style={{fontSize:'.85rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:6}}>Current Investable PV ($)</div>
                   <input type="number" value={investablePV}
                     onChange={e=>setInvestablePV(Math.max(1,+e.target.value))}
-                    style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--radius)',color:'var(--gold)',fontFamily:"'IBM Plex Mono',monospace",fontSize:'1.1rem',padding:'10px 16px',outline:'none',width:200}}/>
+                    style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--radius)',color:'var(--gold)',fontFamily:"'IBM Plex Mono',monospace",fontSize:'1.23rem',padding:'10px 16px',outline:'none',width:200}}/>
                 </div>
                 <button onClick={()=>setShowGoalPlanner(true)} style={primaryBtn}>Open Goal Planner →</button>
               </div>
@@ -620,24 +620,24 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                 {/* WRR strip */}
                 <div style={{display:'flex',alignItems:'center',gap:16,padding:'14px 18px',marginBottom:20,borderRadius:'var(--radius)',background:rrColor(goalData.wrr).bg,border:`1px solid ${rrColor(goalData.wrr).border}`}}>
                   <div>
-                    <div style={{fontSize:'.7rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:4}}>Weighted Required Return (WRR)</div>
+                    <div style={{fontSize:'.83rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:4}}>Weighted Required Return (WRR)</div>
                     <div style={{display:'flex',alignItems:'baseline',gap:10}}>
-                      <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'2rem',color:rrColor(goalData.wrr).text}}>{goalData.wrr.toFixed(2)}%</div>
-                      <div style={{fontSize:'.82rem',fontWeight:600,color:rrColor(goalData.wrr).text,display:'flex',alignItems:'center',gap:4}}>
+                      <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'2.13rem',color:rrColor(goalData.wrr).text}}>{goalData.wrr.toFixed(2)}%</div>
+                      <div style={{fontSize:'.95rem',fontWeight:600,color:rrColor(goalData.wrr).text,display:'flex',alignItems:'center',gap:4}}>
                         {rrColor(goalData.wrr).urgent&&<AlertTriangle size={14}/>} {rrColor(goalData.wrr).label}
                       </div>
                     </div>
                   </div>
                   <div style={{marginLeft:'auto',textAlign:'right'}}>
-                    <div style={{fontSize:'.7rem',color:'var(--text-muted)',marginBottom:4}}>Profile Exp. Return</div>
+                    <div style={{fontSize:'.83rem',color:'var(--text-muted)',marginBottom:4}}>Profile Exp. Return</div>
                     <div style={{fontFamily:"'IBM Plex Mono',monospace",color:'#4ade80',fontSize:'.9rem'}}>{(profileRet*100).toFixed(1)}%</div>
                   </div>
                 </div>
 
-                <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.8rem'}}>
+                <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.93rem'}}>
                   <thead><tr style={{borderBottom:'1px solid var(--border)'}}>
                     {['Goal','Horizon','Target FV','PV Allocated','Req. Return','Status','Planned'].map(h=>(
-                      <th key={h} style={{textAlign:'left',padding:'8px 10px',color:'var(--text-muted)',fontSize:'.68rem',textTransform:'uppercase',letterSpacing:'.08em'}}>{h}</th>
+                      <th key={h} style={{textAlign:'left',padding:'8px 10px',color:'var(--text-muted)',fontSize:'.81rem',textTransform:'uppercase',letterSpacing:'.08em'}}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
@@ -653,16 +653,16 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                           <td style={{padding:'10px 10px',fontFamily:"'IBM Plex Mono',monospace",color:'var(--text-muted)'}}>{g.planned?`$${Math.round(g.pv).toLocaleString()}`:'—'}</td>
                           <td style={{padding:'10px 10px'}}>
                             {rrc ? (
-                              <span style={{color:rrc.text,fontFamily:"'IBM Plex Mono',monospace",fontSize:'.8rem',display:'flex',alignItems:'center',gap:4}}>
+                              <span style={{color:rrc.text,fontFamily:"'IBM Plex Mono',monospace",fontSize:'.93rem',display:'flex',alignItems:'center',gap:4}}>
                                 {g.rr.toFixed(2)}% {rrc.urgent&&<AlertTriangle size={11}/>}
                               </span>
                             ) : <span style={{color:'var(--text-dim)'}}>—</span>}
                           </td>
                           <td style={{padding:'10px 10px'}}>
-                            {rrc ? <span style={{fontSize:'.7rem',color:rrc.text}}>{rrc.label}</span> : <span style={{fontSize:'.7rem',color:'var(--text-dim)'}}>Excluded</span>}
+                            {rrc ? <span style={{fontSize:'.83rem',color:rrc.text}}>{rrc.label}</span> : <span style={{fontSize:'.83rem',color:'var(--text-dim)'}}>Excluded</span>}
                           </td>
                           <td style={{padding:'10px 10px'}}>
-                            <span style={{fontSize:'.7rem',color:g.planned?'#4ade80':'var(--text-dim)'}}>{g.planned?`✓ ${wt}`:'Unplanned'}</span>
+                            <span style={{fontSize:'.83rem',color:g.planned?'#4ade80':'var(--text-dim)'}}>{g.planned?`✓ ${wt}`:'Unplanned'}</span>
                           </td>
                         </tr>
                       )
@@ -671,7 +671,7 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                 </table>
               </div>
             ) : (
-              <div className="card" style={{textAlign:'center',padding:'36px',color:'var(--text-muted)',fontSize:'.88rem'}}>
+              <div className="card" style={{textAlign:'center',padding:'36px',color:'var(--text-muted)',fontSize:'1.005rem'}}>
                 Open the Goal Planner to define your financial goals and see required returns.
               </div>
             )}
@@ -696,16 +696,16 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
               <div className="card-title">C2 — Fund Allocation (Optimal Weights, A = {A.toFixed(2)})</div>
               {portfolioData
                 ? <FundTable data={portfolioData} optimalData={optimalPortfolio}/>
-                : <div style={{color:'var(--text-muted)',fontSize:'.85rem',padding:'16px 0'}}>Portfolio data not available. Ensure Flask is running with your Excel files in ./data/.</div>}
+                : <div style={{color:'var(--text-muted)',fontSize:'.98rem',padding:'16px 0'}}>Portfolio data not available. Ensure Flask is running with your Excel files in ./data/.</div>}
             </div>
 
             {/* C3 — Frontier */}
             <div className="card">
               <div className="card-title">C3 — Efficient Frontier</div>
-              <div style={{fontSize:'.78rem',color:'var(--text-muted)',marginBottom:16}}>Your optimal portfolio (A = {A.toFixed(2)}) is highlighted in gold on the efficient frontier.</div>
+              <div style={{fontSize:'.9rem',color:'var(--text-muted)',marginBottom:16}}>Your optimal portfolio (A = {A.toFixed(2)}) is highlighted in gold on the efficient frontier.</div>
               {portfolioData
                 ? <FrontierChart portfolioData={portfolioData} riskAversion={A} profile={profile} optimalData={optimalPortfolio}/>
-                : <div style={{color:'var(--text-muted)',fontSize:'.85rem',padding:'24px 0',textAlign:'center'}}>Connect Flask backend with fund data to render the frontier.</div>}
+                : <div style={{color:'var(--text-muted)',fontSize:'.98rem',padding:'24px 0',textAlign:'center'}}>Connect Flask backend with fund data to render the frontier.</div>}
             </div>
           </div>
         )}
@@ -717,7 +717,7 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
         {expandedSection.E && (
           <div style={{display:'flex',flexDirection:'column',gap:16}}>
             {!fundOverview ? (
-              <div style={{color:'var(--text-muted)',fontSize:'.85rem',padding:'24px 0',textAlign:'center'}}>
+              <div style={{color:'var(--text-muted)',fontSize:'.98rem',padding:'24px 0',textAlign:'center'}}>
                 Connect Flask backend with fund data to render fund analytics.
               </div>
             ) : (
@@ -733,7 +733,7 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                       <XAxis dataKey="name" tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
                       <YAxis tickFormatter={v=>`${v}%`} tick={{fill:'var(--text-muted)',fontSize:9,fontFamily:'IBM Plex Mono'}}/>
                       <Tooltip
-                        contentStyle={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,fontSize:'.78rem',fontFamily:"'IBM Plex Mono',monospace"}}
+                        contentStyle={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,fontSize:'.9rem',fontFamily:"'IBM Plex Mono',monospace"}}
                         formatter={(v)=>[`${v>=0?'+':''}${v.toFixed(2)}%`,'Ann. Return']}/>
                       <ReferenceLine y={0} stroke="var(--border2)" strokeWidth={1}/>
                       <Bar dataKey="value" radius={[4,4,0,0]} maxBarSize={44}>
@@ -748,7 +748,7 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                 {/* E2 — Variance-Covariance Heatmap */}
                 <div className="card">
                   <div className="card-title"><Grid size={14}/> Variance-Covariance Matrix</div>
-                  <div style={{fontSize:'.75rem',color:'var(--text-muted)',marginBottom:12}}>
+                  <div style={{fontSize:'.88rem',color:'var(--text-muted)',marginBottom:12}}>
                     Hover any cell to see the exact covariance value between two funds.
                   </div>
                   <CovarianceHeatmap matrix={fundOverview.covariance} labels={fundOverview.fund_names}/>
@@ -775,8 +775,8 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
 
             {/* Disclaimer */}
             <div style={{padding:'16px 20px',background:'var(--surface2)',borderRadius:'var(--radius)',border:'1px solid var(--border)',borderLeft:'3px solid var(--text-dim)'}}>
-              <div style={{fontSize:'.72rem',fontWeight:600,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text-dim)',marginBottom:6}}>Disclaimer</div>
-              <div style={{fontSize:'.75rem',color:'var(--text-dim)',lineHeight:1.7}}>
+              <div style={{fontSize:'.85rem',fontWeight:600,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text-dim)',marginBottom:6}}>Disclaimer</div>
+              <div style={{fontSize:'.88rem',color:'var(--text-dim)',lineHeight:1.7}}>
                 This platform is an educational tool developed for BMD5302 Financial Modeling (AY 2025/26 Sem 2) and does not constitute financial advice.
                 All portfolio optimisation results are based on historical price data; past performance is not indicative of future results.
                 Investment involves risk, including the possible loss of principal. Consult a licensed financial adviser before making investment decisions.
@@ -799,6 +799,6 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
   )
 }
 
-const inputStyle = { background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--radius)',color:'var(--text)',fontFamily:"'Syne',sans-serif",fontSize:'.85rem',padding:'6px 10px',outline:'none',width:'100%' }
-const primaryBtn = { fontFamily:"'Syne',sans-serif",display:'inline-flex',alignItems:'center',gap:8,background:'var(--gold)',color:'#000',fontWeight:700,fontSize:'.82rem',letterSpacing:'.06em',textTransform:'uppercase',padding:'12px 22px',borderRadius:99,border:'none',cursor:'pointer' }
-const ghostBtn   = { fontFamily:"'Syne',sans-serif",display:'inline-flex',alignItems:'center',gap:8,background:'transparent',color:'var(--text-muted)',fontWeight:600,fontSize:'.82rem',letterSpacing:'.06em',textTransform:'uppercase',padding:'12px 22px',borderRadius:99,border:'1px solid var(--border2)',cursor:'pointer' }
+const inputStyle = { background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--radius)',color:'var(--text)',fontFamily:"'DM Sans',sans-serif",fontSize:'.98rem',padding:'6px 10px',outline:'none',width:'100%' }
+const primaryBtn = { fontFamily:"'DM Sans',sans-serif",display:'inline-flex',alignItems:'center',gap:8,background:'var(--gold)',color:'#000',fontWeight:700,fontSize:'.95rem',letterSpacing:'.03em',textTransform:'uppercase',padding:'12px 22px',borderRadius:99,border:'none',cursor:'pointer' }
+const ghostBtn   = { fontFamily:"'DM Sans',sans-serif",display:'inline-flex',alignItems:'center',gap:8,background:'transparent',color:'var(--text-muted)',fontWeight:600,fontSize:'.95rem',letterSpacing:'.03em',textTransform:'uppercase',padding:'12px 22px',borderRadius:99,border:'1px solid var(--border2)',cursor:'pointer' }

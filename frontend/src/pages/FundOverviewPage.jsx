@@ -34,11 +34,11 @@ function BarTooltip({ active, payload, label, suffix = '%', decimals = 2 }) {
   return (
     <div style={{
       background: 'var(--surface)', border: '1px solid var(--border)',
-      borderRadius: 8, padding: '10px 14px', fontSize: '.78rem',
+      borderRadius: 8, padding: '10px 14px', fontSize: '.9rem',
       fontFamily: "'IBM Plex Mono', monospace",
     }}>
-      <div style={{ color: 'var(--gold)', marginBottom: 4, fontFamily: "'Syne',sans-serif", fontWeight: 600 }}>{label}</div>
-      {FUND_DESC[label] && <div style={{ color: 'var(--text-muted)', fontSize: '.72rem', marginBottom: 6 }}>{FUND_DESC[label]}</div>}
+      <div style={{ color: 'var(--gold)', marginBottom: 4, fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>{label}</div>
+      {FUND_DESC[label] && <div style={{ color: 'var(--text-muted)', fontSize: '.85rem', marginBottom: 6 }}>{FUND_DESC[label]}</div>}
       <div style={{ color: v >= 0 ? 'var(--green)' : 'var(--red)' }}>
         {v >= 0 && suffix === '%' ? '+' : ''}{v?.toFixed(decimals)}{suffix}
       </div>
@@ -52,10 +52,10 @@ function LineTooltip({ active, payload, label, suffix = '', decimals = 2 }) {
   return (
     <div style={{
       background: 'var(--surface)', border: '1px solid var(--border)',
-      borderRadius: 8, padding: '10px 14px', fontSize: '.75rem',
+      borderRadius: 8, padding: '10px 14px', fontSize: '.88rem',
       fontFamily: "'IBM Plex Mono', monospace", maxWidth: 220,
     }}>
-      <div style={{ color: 'var(--text-muted)', marginBottom: 6, fontSize: '.7rem' }}>{label}</div>
+      <div style={{ color: 'var(--text-muted)', marginBottom: 6, fontSize: '.83rem' }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, color: p.color, marginBottom: 2 }}>
           <span style={{ color: 'var(--text-muted)' }}>{p.name}</span>
@@ -92,7 +92,7 @@ function Heatmap({ matrix, labels, title, isCovariance = false }) {
     <div>
       {/* Hover info bar */}
       <div style={{
-        minHeight: 28, marginBottom: 10, fontSize: '.78rem',
+        minHeight: 28, marginBottom: 10, fontSize: '.9rem',
         fontFamily: "'IBM Plex Mono', monospace",
         color: hovered ? 'var(--text)' : 'var(--text-muted)',
         transition: 'color .15s',
@@ -171,7 +171,7 @@ function Heatmap({ matrix, labels, title, isCovariance = false }) {
       </div>
 
       {/* Legend */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: '.72rem', color: 'var(--text-muted)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: '.85rem', color: 'var(--text-muted)' }}>
         <div style={{ width: 80, height: 8, borderRadius: 4, background: 'linear-gradient(90deg,rgba(248,113,113,.85),var(--surface2),rgba(201,168,76,.9))' }}/>
         <span>{isCovariance ? 'Negative' : '−1.0'}</span>
         <span style={{ marginLeft: 'auto' }}>{isCovariance ? 'Positive' : '+1.0'}</span>
@@ -182,8 +182,8 @@ function Heatmap({ matrix, labels, title, isCovariance = false }) {
 
 // ─── Sortable Fund Stats Table ────────────────────────────────────────────────
 function FundStatsTable({ data }) {
-  const [sortKey, setSortKey]   = useState('returns')
-  const [sortDir, setSortDir]   = useState('desc')
+  const [sortKey, setSortKey]   = useState(null)
+  const [sortDir, setSortDir]   = useState(null)   // null | 'desc' | 'asc'
 
   if (!data) return null
   const { fund_names, returns, std_devs, variances, sharpe_ratios } = data
@@ -194,14 +194,22 @@ function FundStatsTable({ data }) {
     color: FUND_COLORS[i % FUND_COLORS.length],
   }))
 
-  const sortedRows = [...rows].sort((a, b) => {
-    const v = a[sortKey] - b[sortKey]
-    return sortDir === 'asc' ? v : -v
-  })
+  const sortedRows = (sortKey && sortDir)
+    ? [...rows].sort((a, b) => {
+        const v = a[sortKey] - b[sortKey]
+        return sortDir === 'asc' ? v : -v
+      })
+    : rows
 
   function toggleSort(key) {
-    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    else { setSortKey(key); setSortDir('desc') }
+    if (sortKey !== key) {
+      setSortKey(key); setSortDir('desc')
+    } else {
+      // cycle: desc → asc → null (default)
+      if (sortDir === 'desc') setSortDir('asc')
+      else if (sortDir === 'asc') { setSortKey(null); setSortDir(null) }
+      else { setSortKey(key); setSortDir('desc') }
+    }
   }
 
   const cols = [
@@ -212,11 +220,14 @@ function FundStatsTable({ data }) {
     { key: 'sharpe',   label: 'Sharpe Ratio',       sortable: true },
   ]
 
-  const arrow = (key) => sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕'
+  const arrow = (key) => {
+    if (sortKey !== key) return ' ↕'
+    return sortDir === 'asc' ? ' ↑' : ' ↓'
+  }
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.8rem' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.93rem' }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--border)' }}>
             {cols.map(c => (
@@ -225,7 +236,7 @@ function FundStatsTable({ data }) {
                 style={{
                   textAlign: 'left', padding: '8px 12px',
                   color: sortKey === c.key ? 'var(--gold)' : 'var(--text-muted)',
-                  fontSize: '.7rem', textTransform: 'uppercase', letterSpacing: '.08em',
+                  fontSize: '.83rem', textTransform: 'uppercase', letterSpacing: '.08em',
                   fontWeight: 500, cursor: c.sortable ? 'pointer' : 'default',
                   userSelect: 'none', whiteSpace: 'nowrap',
                 }}>
@@ -244,7 +255,7 @@ function FundStatsTable({ data }) {
                 <div>
                   <div style={{ fontWeight: 500 }}>{row.name}</div>
                   {FUND_DESC[row.name] && (
-                    <div style={{ fontSize: '.68rem', color: 'var(--text-muted)', marginTop: 1 }}>{FUND_DESC[row.name]}</div>
+                    <div style={{ fontSize: '.81rem', color: 'var(--text-muted)', marginTop: 1 }}>{FUND_DESC[row.name]}</div>
                   )}
                 </div>
               </td>
@@ -254,7 +265,7 @@ function FundStatsTable({ data }) {
               <td style={{ padding: '10px 12px', fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text-muted)' }}>
                 {(row.std * 100).toFixed(3)}%
               </td>
-              <td style={{ padding: '10px 12px', fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text-muted)', fontSize: '.75rem' }}>
+              <td style={{ padding: '10px 12px', fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text-muted)', fontSize: '.88rem' }}>
                 {row.variance.toFixed(6)}
               </td>
               <td style={{ padding: '10px 12px', fontFamily: "'IBM Plex Mono', monospace", color: row.sharpe >= 0 ? 'var(--text)' : 'var(--red)' }}>
@@ -264,7 +275,7 @@ function FundStatsTable({ data }) {
           ))}
         </tbody>
       </table>
-      <div style={{ fontSize: '.7rem', color: 'var(--text-muted)', marginTop: 8, paddingLeft: 12 }}>
+      <div style={{ fontSize: '.83rem', color: 'var(--text-muted)', marginTop: 8, paddingLeft: 12 }}>
         Click column headers to sort. Sharpe ratio uses Rf = 0%.
       </div>
     </div>
@@ -304,7 +315,7 @@ export default function FundOverviewPage() {
     <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: 40, height: 40, border: '3px solid var(--border)', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin .8s linear infinite', margin: '0 auto 16px' }}/>
-        <div style={{ color: 'var(--text-muted)', fontSize: '.85rem', letterSpacing: '.08em', textTransform: 'uppercase' }}>Loading fund data…</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: '.98rem', letterSpacing: '.08em', textTransform: 'uppercase' }}>Loading fund data…</div>
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
@@ -314,8 +325,8 @@ export default function FundOverviewPage() {
     <div className="page">
       <div style={{ background: 'rgba(248,113,113,.08)', border: '1px solid var(--red)', borderRadius: 'var(--radius-lg)', padding: '28px 32px' }}>
         <div style={{ color: 'var(--red)', fontWeight: 600, marginBottom: 8 }}>Connection Error</div>
-        <div style={{ color: 'var(--text-muted)', fontSize: '.88rem', lineHeight: 1.6, marginBottom: 16 }}>{error}</div>
-        <button onClick={loadData} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--gold)', color: '#000', fontWeight: 700, fontSize: '.82rem', padding: '10px 20px', borderRadius: 99, border: 'none', cursor: 'pointer' }}>
+        <div style={{ color: 'var(--text-muted)', fontSize: '1.005rem', lineHeight: 1.6, marginBottom: 16 }}>{error}</div>
+        <button onClick={loadData} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--gold)', color: '#000', fontWeight: 700, fontSize: '.95rem', padding: '10px 20px', borderRadius: 99, border: 'none', cursor: 'pointer' }}>
           <RefreshCw size={14}/> Retry
         </button>
       </div>
@@ -370,7 +381,7 @@ export default function FundOverviewPage() {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-        <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginTop: 4, paddingLeft: 4 }}>
+        <div style={{ fontSize: '.85rem', color: 'var(--text-muted)', marginTop: 4, paddingLeft: 4 }}>
           Annualised mean of daily log returns × 252. Negative bars shown in red.
         </div>
       </div>
@@ -391,7 +402,7 @@ export default function FundOverviewPage() {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-        <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginTop: 4, paddingLeft: 4 }}>
+        <div style={{ fontSize: '.85rem', color: 'var(--text-muted)', marginTop: 4, paddingLeft: 4 }}>
           Annualised std dev of daily log returns × √252.
         </div>
       </div>
@@ -419,7 +430,7 @@ export default function FundOverviewPage() {
             return (
               <button key={name} onClick={() => toggleFund(name)} style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                padding: '4px 12px', borderRadius: 99, fontSize: '.72rem', fontWeight: 600,
+                padding: '4px 12px', borderRadius: 99, fontSize: '.85rem', fontWeight: 600,
                 border: '1px solid', cursor: 'pointer', transition: 'all .15s',
                 background: hidden ? 'transparent' : `${FUND_COLORS[i % FUND_COLORS.length]}22`,
                 borderColor: hidden ? 'var(--border2)' : FUND_COLORS[i % FUND_COLORS.length],
@@ -449,7 +460,7 @@ export default function FundOverviewPage() {
             ))}
           </LineChart>
         </ResponsiveContainer>
-        <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginTop: 4, paddingLeft: 4 }}>
+        <div style={{ fontSize: '.85rem', color: 'var(--text-muted)', marginTop: 4, paddingLeft: 4 }}>
           Monthly resampled (end-of-month). Click fund buttons above to show/hide individual series.
         </div>
       </div>
@@ -466,7 +477,7 @@ export default function FundOverviewPage() {
               tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'IBM Plex Mono' }}/>
             <Tooltip content={<LineTooltip suffix="" decimals={4}/>}
               formatter={(v) => [`${(v * 100).toFixed(1)}%`]}/>
-            <Legend wrapperStyle={{ fontSize: '.75rem', color: 'var(--text-muted)', paddingTop: 8 }}/>
+            <Legend wrapperStyle={{ fontSize: '.88rem', color: 'var(--text-muted)', paddingTop: 8 }}/>
             {fund_names.map((name, i) => !hiddenFunds.has(name) && (
               <Line key={name} type="monotone" dataKey={name}
                 stroke={FUND_COLORS[i % FUND_COLORS.length]}
@@ -475,7 +486,7 @@ export default function FundOverviewPage() {
             ))}
           </LineChart>
         </ResponsiveContainer>
-        <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginTop: 4, paddingLeft: 4 }}>
+        <div style={{ fontSize: '.85rem', color: 'var(--text-muted)', marginTop: 4, paddingLeft: 4 }}>
           Rolling 30-trading-day std dev × √252, resampled to monthly. COVID spike visible around Mar 2020.
         </div>
       </div>

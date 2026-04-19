@@ -5,8 +5,8 @@
 
 /* ── SIDENAV ─────────────────────────────────────────── */
 .sidenav {
-  width: 220px;
-  min-width: 220px;
+  width: 260px;
+  min-width: 260px;
   background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex;
@@ -27,8 +27,8 @@
   margin-bottom: 24px;
 }
 .brand-icon { font-size: 1.6rem; color: var(--gold); line-height: 1; }
-.brand-title { font-size: 1rem; font-weight: 700; letter-spacing: .02em; color: var(--text); }
-.brand-sub { font-size: .65rem; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; letter-spacing: .08em; }
+.brand-title { font-size: 1.25rem; font-weight: 700; letter-spacing: 0; color: var(--text); }
+.brand-sub { font-size: .9rem; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; letter-spacing: .08em; }
 
 .nav-links { display: flex; flex-direction: column; gap: 4px; flex: 1; }
 
@@ -36,7 +36,7 @@
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px; border-radius: var(--radius);
   color: var(--text-muted); text-decoration: none;
-  font-size: .82rem; font-weight: 500; letter-spacing: .03em;
+  font-size: .95rem; font-weight: 500; letter-spacing: 0;
   transition: background .2s, color .2s;
 }
 .nav-item:hover { background: var(--surface2); color: var(--text); }
@@ -53,7 +53,7 @@
 .page-header { margin-bottom: 40px; }
 .page-eyebrow {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: .7rem; letter-spacing: .18em; text-transform: uppercase;
+  font-size: 1.08rem; letter-spacing: .1em; text-transform: uppercase;
   color: var(--gold); margin-bottom: 10px;
 }
 .page-title {
@@ -61,7 +61,7 @@
   font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 500;
   line-height: 1.2; color: var(--text); margin-bottom: 12px;
 }
-.page-sub { font-size: .88rem; color: var(--text-muted); line-height: 1.6; max-width: 560px; }
+.page-sub { font-size: 1.13rem; color: var(--text-muted); line-height: 1.6; max-width: 560px; }
 
 /* ── CARD ─────────────────────────────────────────────── */
 .card {
@@ -71,8 +71,8 @@
   padding: 28px 32px;
 }
 .card-title {
-  font-size: .75rem; font-weight: 600;
-  letter-spacing: .12em; text-transform: uppercase;
+  font-size: 1rem; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase;
   color: var(--text-muted); margin-bottom: 20px;
   display: flex; align-items: center; gap: 8px;
 }
@@ -92,8 +92,9 @@
 .tag {
   display: inline-flex; align-items: center;
   padding: 3px 10px; border-radius: 99px;
-  font-size: .68rem; font-weight: 600;
-  letter-spacing: .06em; text-transform: uppercase; border: 1px solid;
+  font-size: .93rem; font-weight: 600;
+  letter-spacing: .03em; text-transform: uppercase; border: 1px solid;
+  font-size: 1.06rem;
 }
 .tag-gold { color: var(--gold); border-color: var(--gold-dim); background: var(--gold-glow); }
 .tag-cyan { color: var(--cyan); border-color: var(--cyan-dim); background: rgba(56,189,248,.08); }
