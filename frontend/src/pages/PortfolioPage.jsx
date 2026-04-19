@@ -22,8 +22,8 @@ function ScatterTooltip({ active, payload }) {
   const d = payload[0]?.payload
   if (!d) return null
   return (
-    <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px',fontSize:'.78rem',fontFamily:"'IBM Plex Mono',monospace"}}>
-      {d.name && <div style={{color:'var(--gold)',marginBottom:4,fontFamily:"'Syne',sans-serif",fontWeight:600}}>{d.name}</div>}
+    <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px',fontSize:'.9rem',fontFamily:"'IBM Plex Mono',monospace"}}>
+      {d.name && <div style={{color:'var(--gold)',marginBottom:4,fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>{d.name}</div>}
       <div style={{color:'var(--text-muted)'}}>σ &nbsp;<span style={{color:'var(--text)'}}>{(+d.x).toFixed(2)}%</span></div>
       <div style={{color:'var(--text-muted)'}}>r &nbsp;<span style={{color:'var(--text)'}}>{(+d.y).toFixed(2)}%</span></div>
       {d.sharpe !== undefined && <div style={{color:'var(--text-muted)'}}>Sharpe <span style={{color:'var(--gold)'}}>{(+d.sharpe).toFixed(3)}</span></div>}
@@ -91,7 +91,7 @@ function CorrelationHeatmap({ matrix, labels }) {
         ))}
       </div>
       {/* Legend */}
-      <div style={{display:'flex',alignItems:'center',gap:8,marginTop:12,fontSize:'.72rem',color:'var(--text-muted)'}}>
+      <div style={{display:'flex',alignItems:'center',gap:8,marginTop:12,fontSize:'.85rem',color:'var(--text-muted)'}}>
         <div style={{width:60,height:8,borderRadius:4,background:'linear-gradient(90deg,rgba(248,113,113,.85),var(--surface2),rgba(201,168,76,.85))'}}/>
         <span>-1.0 (inverse)</span><span style={{marginLeft:'auto'}}>+1.0 (perfect correlation)</span>
       </div>
@@ -114,13 +114,13 @@ function WeightsChart({ weights, labels }) {
         const isShort = it.weight < 0
         return (
           <div key={i} style={{display:'grid',gridTemplateColumns:'90px 1fr 48px',alignItems:'center',gap:10}}>
-            <div style={{fontSize:'.72rem',color:'var(--text-muted)',textAlign:'right',fontFamily:"'IBM Plex Mono',monospace",overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={it.label}>
+            <div style={{fontSize:'.85rem',color:'var(--text-muted)',textAlign:'right',fontFamily:"'IBM Plex Mono',monospace",overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={it.label}>
               {it.label.slice(0,10)}
             </div>
             <div style={{height:18,background:'var(--surface2)',borderRadius:4,overflow:'hidden',position:'relative'}}>
               <div style={{position:'absolute',top:0,left:0,height:'100%',width:`${Math.min(pct,100)}%`,background:isShort?'var(--red)':it.color,borderRadius:4,opacity:.85,transition:'width .6s ease'}}/>
             </div>
-            <div style={{fontSize:'.72rem',fontFamily:"'IBM Plex Mono',monospace",color:isShort?'var(--red)':'var(--text)',textAlign:'right'}}>
+            <div style={{fontSize:'.85rem',fontFamily:"'IBM Plex Mono',monospace",color:isShort?'var(--red)':'var(--text)',textAlign:'right'}}>
               {isShort?'-':''}{pct.toFixed(1)}%
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function PortfolioPage() {
     <div className="page" style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'60vh'}}>
       <div style={{textAlign:'center'}}>
         <div style={{width:40,height:40,border:'3px solid var(--border)',borderTopColor:'var(--gold)',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 16px'}}/>
-        <div style={{color:'var(--text-muted)',fontSize:'.85rem',letterSpacing:'.08em',textTransform:'uppercase'}}>Loading analytics…</div>
+        <div style={{color:'var(--text-muted)',fontSize:'.98rem',letterSpacing:'.08em',textTransform:'uppercase'}}>Loading analytics…</div>
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
@@ -168,8 +168,8 @@ export default function PortfolioPage() {
     <div className="page">
       <div style={{background:'rgba(248,113,113,.08)',border:'1px solid var(--red)',borderRadius:'var(--radius-lg)',padding:'28px 32px'}}>
         <div style={{color:'var(--red)',fontWeight:600,marginBottom:8}}>Connection Error</div>
-        <div style={{color:'var(--text-muted)',fontSize:'.88rem',lineHeight:1.6,marginBottom:16}}>{error}</div>
-        <button onClick={loadData} style={{display:'inline-flex',alignItems:'center',gap:8,background:'var(--gold)',color:'#000',fontWeight:700,fontSize:'.82rem',padding:'10px 20px',borderRadius:99,border:'none',cursor:'pointer'}}>
+        <div style={{color:'var(--text-muted)',fontSize:'1.005rem',lineHeight:1.6,marginBottom:16}}>{error}</div>
+        <button onClick={loadData} style={{display:'inline-flex',alignItems:'center',gap:8,background:'var(--gold)',color:'#000',fontWeight:700,fontSize:'.95rem',padding:'10px 20px',borderRadius:99,border:'none',cursor:'pointer'}}>
           <RefreshCw size={14}/> Retry
         </button>
       </div>
@@ -217,7 +217,7 @@ export default function PortfolioPage() {
           { id:'short',    label:'Short Sales Allowed' },
         ].map(t=>(
           <button key={t.id} onClick={()=>setActiveTab(t.id)}
-            style={{fontFamily:"'Syne',sans-serif",fontWeight:600,fontSize:'.8rem',letterSpacing:'.06em',textTransform:'uppercase',padding:'9px 20px',borderRadius:99,border:'1.5px solid',cursor:'pointer',transition:'all .2s',
+            style={{fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:'.93rem',letterSpacing:'.06em',textTransform:'uppercase',padding:'9px 20px',borderRadius:99,border:'1.5px solid',cursor:'pointer',transition:'all .2s',
               background:activeTab===t.id?'var(--gold)':'transparent',
               color:activeTab===t.id?'#000':'var(--text-muted)',
               borderColor:activeTab===t.id?'var(--gold)':'var(--border2)',
@@ -239,8 +239,8 @@ export default function PortfolioPage() {
               <XAxis dataKey="x" name="Risk (σ %)" type="number" domain={['auto','auto']}
                 label={{value:'Annualised σ (%)',position:'insideBottom',offset:-8,fill:'var(--text-muted)',fontSize:11}}
                 tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
-              <YAxis dataKey="y" name="Return (%)" type="number" domain={['auto','auto']}
-                label={{value:'Annualised Return (%)',angle:-90,position:'insideLeft',offset:12,fill:'var(--text-muted)',fontSize:11}}
+              <YAxis dataKey="y" name="Return (%)" type="number" domain={['auto','auto']} width={70}
+                label={{value:'Annualised Return (%)',angle:-90,position:'insideLeft',style:{textAnchor:'middle'},fill:'var(--text-muted)',fontSize:11}}
                 tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
               <Tooltip content={<ScatterTooltip/>}/>
 
@@ -263,12 +263,12 @@ export default function PortfolioPage() {
           {/* Fund legend */}
           <div style={{display:'flex',flexWrap:'wrap',gap:'6px 14px',marginTop:8,paddingTop:12,borderTop:'1px solid var(--border)'}}>
             {fundPoints.map((fp,i)=>(
-              <div key={fp.name} style={{display:'flex',alignItems:'center',gap:5,fontSize:'.68rem',color:'var(--text-muted)'}}>
+              <div key={fp.name} style={{display:'flex',alignItems:'center',gap:5,fontSize:'.81rem',color:'var(--text-muted)'}}>
                 <div style={{width:8,height:8,borderRadius:'50%',background:fp.color,flexShrink:0}}/>
                 {fp.name}
               </div>
             ))}
-            <div style={{display:'flex',alignItems:'center',gap:5,fontSize:'.68rem',color:'var(--gold)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:5,fontSize:'.81rem',color:'var(--gold)'}}>
               <div style={{width:8,height:8,borderRadius:'50%',background:'var(--gold)',flexShrink:0}}/>
               GMVP
             </div>
@@ -285,8 +285,8 @@ export default function PortfolioPage() {
               {label:'Sharpe Ratio',    value:activeGmvp.sharpe.toFixed(4)},
             ].map(s=>(
               <div key={s.label} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
-                <span style={{fontSize:'.75rem',color:'var(--text-muted)'}}>{s.label}</span>
-                <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:'.82rem',color:'var(--gold)'}}>{s.value}</span>
+                <span style={{fontSize:'.88rem',color:'var(--text-muted)'}}>{s.label}</span>
+                <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:'.95rem',color:'var(--gold)'}}>{s.value}</span>
               </div>
             ))}
           </div>
@@ -302,11 +302,11 @@ export default function PortfolioPage() {
       <div className="card" style={{marginBottom:24}}>
         <div className="card-title"><BarChart2 size={14}/> Fund Statistics</div>
         <div style={{overflowX:'auto'}}>
-          <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.8rem'}}>
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.93rem'}}>
             <thead>
               <tr style={{borderBottom:'1px solid var(--border)'}}>
                 {['Fund','Avg Return (ann.)','Std Dev (ann.)','Sharpe (approx.)'].map(h=>(
-                  <th key={h} style={{textAlign:'left',padding:'8px 12px',color:'var(--text-muted)',fontSize:'.7rem',textTransform:'uppercase',letterSpacing:'.08em',fontWeight:500}}>{h}</th>
+                  <th key={h} style={{textAlign:'left',padding:'8px 12px',color:'var(--text-muted)',fontSize:'.83rem',textTransform:'uppercase',letterSpacing:'.08em',fontWeight:500}}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -347,7 +347,7 @@ export default function PortfolioPage() {
       {/* ── Frontier Comparison overlay ── */}
       <div className="card">
         <div className="card-title"><TrendingUp size={14}/> Frontier Comparison — Both Modes</div>
-        <div style={{fontSize:'.8rem',color:'var(--text-muted)',marginBottom:16}}>
+        <div style={{fontSize:'.93rem',color:'var(--text-muted)',marginBottom:16}}>
           The unconstrained frontier (short sales) is always at least as efficient as the constrained one.
         </div>
         <ResponsiveContainer width="100%" height={340}>
@@ -360,7 +360,7 @@ export default function PortfolioPage() {
               label={{value:'Return (%)',angle:-90,position:'insideLeft',offset:12,fill:'var(--text-muted)',fontSize:11}}
               tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
             <Tooltip content={<ScatterTooltip/>}/>
-            <Legend wrapperStyle={{fontSize:'.78rem',color:'var(--text-muted)',paddingTop:8}}/>
+            <Legend wrapperStyle={{fontSize:'.9rem',color:'var(--text-muted)',paddingTop:8}}/>
             <Scatter name="No Short Sales" data={frontier_no_short.std.map((s,i)=>({x:+(s*100).toFixed(3),y:+(frontier_no_short.ret[i]*100).toFixed(3)}))} line={{stroke:'var(--cyan)',strokeWidth:2}} fill="transparent"/>
             <Scatter name="Short Sales Allowed" data={frontier_short.std.map((s,i)=>({x:+(s*100).toFixed(3),y:+(frontier_short.ret[i]*100).toFixed(3)}))} line={{stroke:'var(--gold)',strokeWidth:2,strokeDasharray:'5 3'}} fill="transparent"/>
             <Scatter name="GMVP (No Short)" data={[{x:+(gmvp_no_short.std*100).toFixed(3),y:+(gmvp_no_short.return*100).toFixed(3),name:'GMVP (No Short)'}]} fill="var(--cyan)" r={8}/>

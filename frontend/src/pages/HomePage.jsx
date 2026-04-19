@@ -10,14 +10,14 @@ export default function HomePage() {
   ]
   const features = [
     {
-      icon: <ClipboardList size={20}/>, title:'Risk Profiling',
-      desc:'8-question psychometric assessment computing a personalised risk aversion coefficient A ∈ [1, 10].',
-      path:'/questionnaire', tag:'Part 2',
-    },
-    {
       icon: <TrendingUp size={20}/>, title:'Efficient Frontier & Analytics',
       desc:'Live mean-variance frontier, GMVP, correlation heatmap, and fund scatter — with and without short sales.',
       path:'/portfolio', tag:'Part 1',
+    },
+    {
+      icon: <ClipboardList size={20}/>, title:'Risk Profiling',
+      desc:'10-question psychometric assessment computing a personalised risk aversion coefficient A ∈ [1, 10].',
+      path:'/questionnaire', tag:'Part 2',
     },
   ]
   const method = [
@@ -48,8 +48,8 @@ export default function HomePage() {
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:32}}>
         {stats.map(s=>(
           <div key={s.label} className="card" style={{textAlign:'center',padding:'20px 16px'}}>
-            <div style={{fontFamily:"'Lora',serif",fontSize:'2rem',fontStyle:'italic',color:'var(--text)'}}>{s.value}</div>
-            <div style={{fontSize:'.7rem',textTransform:'uppercase',letterSpacing:'.12em',color:'var(--text-muted)',marginTop:4}}>{s.label}</div>
+            <div style={{fontFamily:"'Lora',serif",fontSize:'2.13rem',fontStyle:'italic',color:'var(--text)'}}>{s.value}</div>
+            <div style={{fontSize:'.83rem',textTransform:'uppercase',letterSpacing:'.12em',color:'var(--text-muted)',marginTop:4}}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -62,9 +62,9 @@ export default function HomePage() {
               <div style={{color:'var(--gold)'}}>{f.icon}</div>
               <span className="tag tag-gold">{f.tag}</span>
             </div>
-            <div style={{fontWeight:700,fontSize:'1.05rem',marginBottom:8,color:'var(--text)'}}>{f.title}</div>
-            <div style={{fontSize:'.83rem',color:'var(--text-muted)',lineHeight:1.65}}>{f.desc}</div>
-            <div style={{marginTop:20,display:'flex',alignItems:'center',gap:6,fontSize:'.78rem',color:'var(--gold)'}}>Open <ArrowRight size={12}/></div>
+            <div style={{fontWeight:700,fontSize:'1.18rem',marginBottom:8,color:'var(--text)'}}>{f.title}</div>
+            <div style={{fontSize:'.96rem',color:'var(--text-muted)',lineHeight:1.65}}>{f.desc}</div>
+            <div style={{marginTop:20,display:'flex',alignItems:'center',gap:6,fontSize:'.9rem',color:'var(--gold)'}}>Open <ArrowRight size={12}/></div>
           </Link>
         ))}
       </div>
@@ -94,7 +94,7 @@ export default function HomePage() {
 const btnPrimary = {
   display:'inline-flex',alignItems:'center',gap:8,
   background:'var(--gold)',color:'#000',fontWeight:700,
-  fontSize:'.82rem',letterSpacing:'.06em',textTransform:'uppercase',
+  fontSize:'.95rem',letterSpacing:'.03em',textTransform:'uppercase',
   padding:'12px 24px',borderRadius:99,textDecoration:'none',
 }
 const featureCard = {
@@ -105,7 +105,7 @@ const featureCard = {
 const btnGhost = {
   display:'inline-flex',alignItems:'center',gap:8,
   background:'transparent',color:'var(--text-muted)',fontWeight:600,
-  fontSize:'.82rem',letterSpacing:'.06em',textTransform:'uppercase',
+  fontSize:'.95rem',letterSpacing:'.03em',textTransform:'uppercase',
   padding:'12px 24px',borderRadius:99,textDecoration:'none',
   border:'1px solid var(--border2)',
 }

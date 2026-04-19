@@ -1,21 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:ital,wght@0,300;0,400;1,300&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:ital,wght@0,300;0,400;1,300&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
 
 :root {
-  --bg:         #080c12;
-  --surface:    #0f1520;
-  --surface2:   #151d2e;
-  --border:     #1e2d45;
-  --border2:    #2a3d58;
-  --gold:       #c9a84c;
-  --gold-dim:   #7a6130;
+  --bg:         #0b1018;
+  --surface:    #131b27;
+  --surface2:   #1a2435;
+  --border:     #243348;
+  --border2:    #2e4260;
+  --gold:       #e0bc50;
+  --gold-dim:   #8a6e38;
   --gold-glow:  rgba(201,168,76,0.15);
   --cyan:       #38bdf8;
   --cyan-dim:   #0369a1;
   --red:        #f87171;
   --green:      #4ade80;
-  --text:       #e2e8f0;
-  --text-muted: #64748b;
-  --text-dim:   #334155;
+  --text:       #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-dim:   #506070;
   --radius:     10px;
   --radius-lg:  18px;
 }
@@ -24,7 +24,7 @@
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'Syne', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -49,4 +49,4 @@ body::before {
 ::-webkit-scrollbar-track { background: var(--surface); }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
 
-.recharts-text { font-family: 'IBM Plex Mono', monospace !important; font-size: 11px !important; }
+.recharts-text { font-family: 'IBM Plex Mono', monospace !important; font-size: 17px !important; }

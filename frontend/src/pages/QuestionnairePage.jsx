@@ -77,7 +77,7 @@ export default function QuestionnairePage() {
       </div>
 
       {error && (
-        <div style={{background:'rgba(248,113,113,.1)',border:'1px solid #f87171',borderRadius:'var(--radius)',padding:'14px 18px',color:'#f87171',fontSize:'.85rem',marginBottom:24}}>
+        <div style={{background:'rgba(248,113,113,.1)',border:'1px solid #f87171',borderRadius:'var(--radius)',padding:'14px 18px',color:'#f87171',fontSize:'.98rem',marginBottom:24}}>
           {error}
         </div>
       )}
@@ -85,7 +85,7 @@ export default function QuestionnairePage() {
       {/* ── Progress bar ── */}
       {total > 0 && (
         <div style={{marginBottom:32}}>
-          <div style={{display:'flex',justifyContent:'space-between',fontSize:'.72rem',color:'var(--text-muted)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:8}}>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:'.85rem',color:'var(--text-muted)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:8}}>
             <span>Question {current + 1} of {total}</span>
             <span>{pct}% complete</span>
           </div>
@@ -98,10 +98,10 @@ export default function QuestionnairePage() {
       {/* ── Question card ── */}
       {q ? (
         <div className="card" key={q.id} style={{animation:'fadeUp .35s ease'}}>
-          <div style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:'.7rem',letterSpacing:'.14em',textTransform:'uppercase',color:'var(--gold)',marginBottom:10}}>
+          <div style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:'.83rem',letterSpacing:'.14em',textTransform:'uppercase',color:'var(--gold)',marginBottom:10}}>
             Question {current + 1}
           </div>
-          <div style={{fontFamily:"'Lora',serif",fontSize:'1.35rem',lineHeight:1.45,color:'var(--text)',marginBottom:28}}>
+          <div style={{fontFamily:"'Lora',serif",fontSize:'1.48rem',lineHeight:1.45,color:'var(--text)',marginBottom:28}}>
             {q.text}
           </div>
 
@@ -112,7 +112,7 @@ export default function QuestionnairePage() {
                   {selected === idx && <CheckCircle size={12} style={{color:'#000'}}/>}
                 </div>
                 <span style={{fontFamily:"Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",fontSize:'.9rem',lineHeight:1.5,textAlign:'left'}}>{label}</span>
-                <span style={{marginLeft:'auto',fontFamily:"'IBM Plex Mono',monospace",fontSize:'.7rem',
+                <span style={{marginLeft:'auto',fontFamily:"'IBM Plex Mono',monospace",fontSize:'.83rem',
                   color:selected===idx?'var(--gold)':'var(--text-dim)',minWidth:16}}>{idx + 1}</span>
               </button>
             ))}
@@ -140,7 +140,7 @@ export default function QuestionnairePage() {
 
       {/* ── Keyboard hint ── */}
       {q && (
-        <div style={{textAlign:'center',marginTop:16,fontSize:'.72rem',color:'var(--text-dim)',letterSpacing:'.06em'}}>
+        <div style={{textAlign:'center',marginTop:16,fontSize:'.85rem',color:'var(--text-dim)',letterSpacing:'.06em'}}>
           Press 1–{q.options.length} to select · Enter to advance · ← → to navigate
         </div>
       )}
@@ -156,7 +156,7 @@ function optStyle(sel) {
     borderRadius:'var(--radius)',border:`1.5px solid ${sel?'var(--gold)':'var(--border)'}`,
     background:sel?'var(--gold-glow)':'transparent',cursor:'pointer',
     color:'var(--text)',transition:'border-color .15s,background .15s,transform .15s',
-    fontFamily:"'Syne',sans-serif",
+    fontFamily:"'DM Sans',sans-serif",
     transform:sel?'translateX(4px)':'none',
   }
 }
@@ -172,7 +172,7 @@ function bulletStyle(sel) {
 function navBtn(primary) {
   return {
     display:'inline-flex',alignItems:'center',gap:6,
-    fontFamily:"'Syne',sans-serif",fontWeight:600,fontSize:'.82rem',
+    fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:'.95rem',
     letterSpacing:'.06em',textTransform:'uppercase',
     padding:'11px 22px',borderRadius:99,cursor:'pointer',
     background:primary?'var(--gold)':'transparent',
