@@ -130,11 +130,12 @@ def compute_risk_aversion(answers: dict) -> dict:
         else:
             rc.append(score)
 
-    rw_scores    = round(sum(rw) / len(rw), 4)
-    rc_scores    = round(sum(rc) / len(rc), 4)
-    final_scores = min(rw_scores, rc_scores)
-    delta        = round(rw_scores - rc_scores, 4)
-    A            = round(11 - final_scores, 4)
+    rw_scores = round(sum(rw) / len(rw), 4)
+    rc_scores = round(sum(rc) / len(rc), 4)
+    final_scores = (rw_scores + rc_scores) / 2
+    delta = round(rw_scores - rc_scores, 4)
+
+    A = round(11 - final_scores, 4)
 
     if delta >= 2.0:
         message     = "Risk Alert"
