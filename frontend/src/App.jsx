@@ -1,12 +1,12 @@
-import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
 import { BarChart2, ClipboardList, Home, TrendingUp } from 'lucide-react'
 import HomePage from './pages/HomePage'
 import QuestionnairePage from './pages/QuestionnairePage'
 import PortfolioPage from './pages/PortfolioPage'
+import FundOverviewPage from './pages/FundOverviewPage'
 import './App.css'
 
 function Nav() {
-  const loc = useLocation()
   return (
     <nav className="sidenav">
       <div className="nav-brand">
@@ -26,6 +26,9 @@ function Nav() {
         <NavLink to="/portfolio" className={({isActive})=>`nav-item${isActive?' active':''}`}>
           <TrendingUp size={16}/> <span>Frontier &amp; Analytics</span>
         </NavLink>
+        <NavLink to="/funds" className={({isActive})=>`nav-item${isActive?' active':''}`}>
+          <BarChart2 size={16}/> <span>Fund Overview</span>
+        </NavLink>
       </div>
       <div className="nav-footer">
         <span className="mono dim">AY 2025/26 · Sem 2</span>
@@ -44,6 +47,7 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/questionnaire" element={<QuestionnairePage />} />
             <Route path="/portfolio" element={<PortfolioPage />} />
+            <Route path="/funds" element={<FundOverviewPage />} />
           </Routes>
         </main>
       </div>

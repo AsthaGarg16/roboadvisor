@@ -1,15 +1,16 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   PieChart, Pie, Cell, Tooltip as RTooltip, ResponsiveContainer,
-  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend
+  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  BarChart, Bar, ReferenceLine
 } from 'recharts'
 import {
   RotateCcw, Download, AlertTriangle, Info, TrendingUp,
-  CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp
+  CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, BarChart2, Grid
 } from 'lucide-react'
 
 /* ─────────────────────────── CONSTANTS ─────────────────────────── */
-const API = 'http://localhost:5000'
+const API = 'http://localhost:5001'
 
 const FUND_COLORS = [
   '#c9a84c','#38bdf8','#4ade80','#f87171','#a78bfa',
@@ -395,13 +396,86 @@ async function downloadPDF(data, goalData, profile) {
   setTimeout(()=>w.print(),500)
 }
 
+/* ─────────────────────────── COVARIANCE HEATMAP ────────────────── */
+function CovarianceHeatmap({ matrix, labels }) {
+  const [hovered, setHovered] = useState(null)
+  if (!matrix || !labels) return null
+  const n        = labels.length
+  const cellSize = Math.min(52, Math.floor(560 / n))
+  const absMax   = Math.max(...matrix.flat().map(Math.abs))
+
+  function getColor(v) {
+    const t = Math.abs(v) / absMax
+    return v >= 0
+      ? `rgba(201,168,76,${0.12 + 0.75 * t})`
+      : `rgba(248,113,113,${0.1 + 0.75 * t})`
+  }
+
+  const isHov = (i, j) =>
+    hovered && (hovered.i === i || hovered.j === j || hovered.i === j || hovered.j === i)
+
+  return (
+    <div>
+      <div style={{minHeight:24,marginBottom:8,fontSize:'.75rem',fontFamily:"'IBM Plex Mono',monospace",color:hovered?'var(--text)':'var(--text-muted)'}}>
+        {hovered
+          ? <><span style={{color:'var(--gold)'}}>{labels[hovered.i]}</span> × <span style={{color:'var(--gold)'}}>{labels[hovered.j]}</span>  →  {matrix[hovered.i][hovered.j].toFixed(6)}</>
+          : 'Hover a cell for exact value'}
+      </div>
+      <div style={{overflowX:'auto'}}>
+        <div style={{display:'inline-block',minWidth:(n+1)*cellSize}} onMouseLeave={()=>setHovered(null)}>
+          <div style={{display:'flex',marginLeft:cellSize}}>
+            {labels.map(l=>(
+              <div key={l} style={{width:cellSize,minWidth:cellSize,fontSize:8,color:'var(--text-muted)',textAlign:'center',fontFamily:"'IBM Plex Mono',monospace",overflow:'hidden',whiteSpace:'nowrap'}}>
+                {l.slice(0,6)}
+              </div>
+            ))}
+          </div>
+          {matrix.map((row,i)=>(
+            <div key={i} style={{display:'flex',alignItems:'center'}}>
+              <div style={{width:cellSize,minWidth:cellSize,fontSize:8,color:'var(--text-muted)',textAlign:'right',paddingRight:5,fontFamily:"'IBM Plex Mono',monospace",overflow:'hidden',whiteSpace:'nowrap'}}>
+                {labels[i].slice(0,6)}
+              </div>
+              {row.map((v,j)=>(
+                <div key={j}
+                  onMouseEnter={()=>setHovered({i,j})}
+                  style={{
+                    width:cellSize,height:cellSize,minWidth:cellSize,
+                    background:getColor(v),
+                    border: hovered && hovered.i===i && hovered.j===j
+                      ? '1.5px solid var(--gold)'
+                      : isHov(i,j)
+                        ? '1px solid rgba(201,168,76,0.45)'
+                        : '1px solid var(--surface)',
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    fontSize:7,color:'var(--text-muted)',
+                    fontFamily:"'IBM Plex Mono',monospace",cursor:'crosshair',
+                    opacity: hovered && !isHov(i,j) ? 0.45 : 1,
+                    transition:'opacity .12s,border .08s',
+                    boxSizing:'border-box',
+                  }}>
+                  {cellSize>40?v.toFixed(4):''}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:8,marginTop:10,fontSize:'.7rem',color:'var(--text-muted)'}}>
+        <div style={{width:70,height:7,borderRadius:4,background:'linear-gradient(90deg,rgba(248,113,113,.8),var(--surface2),rgba(201,168,76,.85))'}}/>
+        <span>Negative covariance</span><span style={{marginLeft:'auto'}}>Positive covariance</span>
+      </div>
+    </div>
+  )
+}
+
 /* ─────────────────────────── MAIN DASHBOARD ─────────────────────── */
 export default function ResultDashboard({ data, portfolioData, onRetake }) {
   const [investablePV, setInvestablePV] = useState(100000)
   const [showGoalPlanner, setShowGoalPlanner] = useState(false)
   const [goalData, setGoalData] = useState(null)
-  const [expandedSection, setExpandedSection] = useState({ A:true, B:true, C:true, D:true })
+  const [expandedSection, setExpandedSection] = useState({ A:true, B:true, C:true, E:false, D:true })
   const [optimalPortfolio, setOptimalPortfolio] = useState(null)
+  const [fundOverview, setFundOverview]         = useState(null)
 
   const profile      = data.profile
   const A            = data.risk_aversion
@@ -413,6 +487,13 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
       .then(d => setOptimalPortfolio(d))
       .catch(() => {})
   }, [portfolioData, A])
+
+  useEffect(() => {
+    fetch(`${API}/api/fund-overview`)
+      .then(r => r.json())
+      .then(d => setFundOverview(d))
+      .catch(() => {})
+  }, [])
   const profileRet   = PROFILE_ALLOCATIONS[profile] ? PROFILE_EXPECTED_RETURN[profile] || 0.07 : 0.07
   const alloc        = PROFILE_ALLOCATIONS[profile] || {}
 
@@ -626,6 +707,54 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                 ? <FrontierChart portfolioData={portfolioData} riskAversion={A} profile={profile} optimalData={optimalPortfolio}/>
                 : <div style={{color:'var(--text-muted)',fontSize:'.85rem',padding:'24px 0',textAlign:'center'}}>Connect Flask backend with fund data to render the frontier.</div>}
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* ══ BAND E — FUND ANALYTICS ════════════════════════════════ */}
+      <div style={{marginBottom:24}}>
+        {sectionHeader('Fund Analytics Overview','E','Band E')}
+        {expandedSection.E && (
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            {!fundOverview ? (
+              <div style={{color:'var(--text-muted)',fontSize:'.85rem',padding:'24px 0',textAlign:'center'}}>
+                Connect Flask backend with fund data to render fund analytics.
+              </div>
+            ) : (
+              <>
+                {/* E1 — Avg Annual Returns bar chart */}
+                <div className="card">
+                  <div className="card-title"><BarChart2 size={14}/> Average Annual Return by Fund</div>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart
+                      data={fundOverview.fund_names.map((name,i)=>({ name, value: +(fundOverview.returns[i]*100).toFixed(2) }))}
+                      margin={{top:8,right:16,bottom:16,left:8}}>
+                      <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" strokeOpacity={.5} vertical={false}/>
+                      <XAxis dataKey="name" tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
+                      <YAxis tickFormatter={v=>`${v}%`} tick={{fill:'var(--text-muted)',fontSize:9,fontFamily:'IBM Plex Mono'}}/>
+                      <Tooltip
+                        contentStyle={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,fontSize:'.78rem',fontFamily:"'IBM Plex Mono',monospace"}}
+                        formatter={(v)=>[`${v>=0?'+':''}${v.toFixed(2)}%`,'Ann. Return']}/>
+                      <ReferenceLine y={0} stroke="var(--border2)" strokeWidth={1}/>
+                      <Bar dataKey="value" radius={[4,4,0,0]} maxBarSize={44}>
+                        {fundOverview.fund_names.map((name,i)=>(
+                          <Cell key={name} fill={fundOverview.returns[i]>=0 ? FUND_COLORS[i%FUND_COLORS.length] : '#f87171'}/>
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* E2 — Variance-Covariance Heatmap */}
+                <div className="card">
+                  <div className="card-title"><Grid size={14}/> Variance-Covariance Matrix</div>
+                  <div style={{fontSize:'.75rem',color:'var(--text-muted)',marginBottom:12}}>
+                    Hover any cell to see the exact covariance value between two funds.
+                  </div>
+                  <CovarianceHeatmap matrix={fundOverview.covariance} labels={fundOverview.fund_names}/>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

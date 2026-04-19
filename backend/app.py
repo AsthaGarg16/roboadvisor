@@ -2,13 +2,15 @@
 BMD5302 Robot Adviser — Flask Backend
 ======================================
 API Routes:
-  GET  /api/questions     → 8 questionnaire questions (no scores exposed)
-  POST /api/score         → accepts answers, returns risk aversion A + profile
-  GET  /api/portfolio     → efficient frontier, GMVP, fund stats, correlation
+  GET  /api/questions       → questionnaire questions (no scores exposed)
+  POST /api/score           → accepts answers, returns risk aversion A + profile
+  GET  /api/portfolio       → efficient frontier, GMVP, fund stats, correlation
+  GET  /api/optimal         → optimal portfolio for a given A
+  GET  /api/fund-overview   → per-fund stats + time-series for Fund Overview page
 
 DATA SETUP:
-  Place your 10 Excel files in the ./data/ folder.
-  Each file must have:
+  Run `python fetch_data.py` from the backend/ folder to populate ./data/.
+  Each .xlsx file must have:
     Column 0 → Date  (any parseable date format)
     Column 1 → Price (daily closing / NAV price)
   File name becomes the fund label in the UI.
@@ -17,23 +19,20 @@ In dev mode: React (port 5173) calls this Flask server (port 5000).
 In production: run `npm run build` inside frontend/, then Flask serves dist/.
 """
 
-import os, glob
-import numpy as np
-import pandas as pd
+import os
+import traceback
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from scipy.optimize import minimize
 
-# ─── CONFIG ──────────────────────────────────────────────────────────────────
-FOLDER     = "./data"       # folder containing your 10 Excel (.xlsx) files
-PATTERN    = "*.xlsx"       # change to *.xls for legacy files
-DATE_COL   = 0              # column index (0-based) for the date
-PRICE_COL  = 1              # column index (0-based) for the price
-N_FRONTIER = 120            # number of points to trace on each frontier
-RF_RATE    = 0.0            # annual risk-free rate (e.g. 0.04 for 4%)
+from portfolio_math import (
+    get_portfolio_data,
+    get_math_cache,
+    get_fund_overview,
+    solve_optimal_portfolio,
+)
 
 app = Flask(__name__, static_folder="frontend/dist", static_url_path="/")
-CORS(app)   # allow all origins so React dev server can call the API
+CORS(app)
 
 # ─── QUESTIONNAIRE ───────────────────────────────────────────────────────────
 QUESTIONS = [
@@ -108,12 +107,6 @@ QUESTIONS = [
      ]},
 ]
 
-'''
-ToDo:
-    1. Change to 3 levels in total: Risk Alert, Educational Insight, Risk Profile Aligned
-    2. Check how the score here is used, it should not affect U calculation
-    3. Change color is needed
-'''
 PROFILES = [
     (2.0,  "Aggressive",              "#e74c3c",
      "You have a high appetite for risk and pursue maximum returns. Your portfolio will be heavily weighted toward high-growth, volatile assets."),
@@ -127,33 +120,11 @@ PROFILES = [
      "You prioritise keeping your capital safe above all else. Low-volatility instruments and cash equivalents dominate your ideal portfolio."),
 ]
 
-# ─── RISK AVERSION FORMULA ────────────────────────────────────────────────────
+# ─── RISK AVERSION ───────────────────────────────────────────────────────────
 def compute_risk_aversion(answers: dict) -> dict:
-    """
-    answers: { "q1": score_int, ... }
-
-    Higher questionnaire scores indicate stronger risk appetite.
-
-    Split questionnaire into:
-    - Q1–Q5: Risk Willingness (RW)
-    - Q6–Q10: Risk Capability (RC)
-
-    Formula:
-        rw_scores = Σ (weight_i × score_i)              ∈ [1, 10]
-        rc_scores = Σ (weight_i × score_i)              ∈ [1, 10]
-        final_scores = min(rw_scores, rc_scores)        ∈ [1, 10]
-        A   = 11- final_scores                          ∈ [1, 10]
-
-    A = 1  → very aggressive  (high score, strong risk appetite)
-    A = 10 → very conservative (low score, low risk appetite)
-
-    In Markowitz utility U = r − (A/2)σ², higher A = more risk averse.
-    """
     rw, rc = [], []
-
     for q in QUESTIONS:
         score = int(answers[q["id"]])
-
         if q["id"] in ["q1", "q2", "q3", "q4", "q5"]:
             rw.append(score)
         else:
@@ -166,24 +137,21 @@ def compute_risk_aversion(answers: dict) -> dict:
 
     A = round(11 - final_scores, 4)
 
-    # Decision logic
     if delta >= 2.0:
-        message = "Risk Alert"
+        message     = "Risk Alert"
         explanation = (
             "Your subjective willingness to take risk exceeds your objective financial capacity. "
             "To ensure your long-term solvency, the system has capped your risk profile at your maximum financial ability."
         )
-
     elif delta <= -2.0:
-        message = "Educational Insight"
+        message     = "Educational Insight"
         explanation = (
             "Your objective financial capacity is significantly higher than your stated willingness to take risk. "
             "While your portfolio remains conservative for your comfort, please be aware that excessive caution "
             "may prevent you from achieving long-term capital growth and outperforming inflation."
         )
-
     else:
-        message = "Risk Profile Aligned"
+        message     = "Risk Profile Aligned"
         explanation = (
             "Your investment attitude is well-synchronized with your objective financial capacity. "
             "Your portfolio is optimized for both psychological comfort and financial stability."
@@ -191,137 +159,24 @@ def compute_risk_aversion(answers: dict) -> dict:
 
     name = col = desc = ""
     for thr, n, c, d in PROFILES:
-        if A <= thr: name, col, desc = n, c, d; break
+        if A <= thr:
+            name, col, desc = n, c, d
+            break
 
-    return {"risk_aversion": A,
-            "profile": name,
-            "colour": col,
-            "description": desc,
-            "utility_formula": f"U = r - (σ² × {A}) / 2",
-            "risk_willingness": rw_scores,
-            "risk_capability": rc_scores,
-            "final_risk_score": final_scores,
-            "delta": delta,
-            "assessment": message,
-            "explanation": explanation
-            }
-
-# ─── PORTFOLIO MATH ───────────────────────────────────────────────────────────
-def load_prices() -> pd.DataFrame:
-    files = sorted(glob.glob(os.path.join(FOLDER, PATTERN)))
-    if not files:
-        raise FileNotFoundError(
-            f"No files matching '{PATTERN}' in '{os.path.abspath(FOLDER)}'. "
-            "Add your 10 fund Excel files there."
-        )
-    series = []
-    for fp in files:
-        name = os.path.splitext(os.path.basename(fp))[0]
-        df   = pd.read_excel(fp, header=0)
-        s    = pd.Series(
-            pd.to_numeric(df.iloc[:, PRICE_COL], errors="coerce").values,
-            index=pd.to_datetime(df.iloc[:, DATE_COL], errors="coerce"),
-            name=name,
-        ).dropna()
-        series.append(s)
-    return pd.concat(series, axis=1).sort_index().dropna()
-
-
-def compute_stats(prices):
-    ret  = np.log(prices / prices.shift(1)).dropna()
-    return ret.mean() * 252, ret.cov() * 252, ret.corr()
-
-
-def port_perf(w, mu, cov):
-    r = float(w @ mu)
-    v = float(w @ cov @ w)
-    return r, np.sqrt(max(v, 0))
-
-
-def solve_gmvp_no_short(mu, cov):
-    n = len(mu)
-    res = minimize(lambda w: w @ cov @ w, np.ones(n) / n, method="SLSQP",
-                   bounds=[(0, 1)] * n,
-                   constraints={"type": "eq", "fun": lambda w: np.sum(w) - 1},
-                   options={"ftol": 1e-12, "maxiter": 1000})
-    r, s = port_perf(res.x, mu, cov)
-    return {"weights": res.x.tolist(), "return": r, "std": s,
-            "sharpe": (r - RF_RATE) / s if s > 0 else 0}
-
-
-def solve_gmvp_short(mu, cov):
-    ci   = np.linalg.inv(cov)
-    ones = np.ones(len(mu))
-    w    = ci @ ones / (ones @ ci @ ones)
-    r, s = port_perf(w, mu, cov)
-    return {"weights": w.tolist(), "return": r, "std": s,
-            "sharpe": (r - RF_RATE) / s if s > 0 else 0}
-
-
-def build_frontier(mu, cov, allow_short=False, n=N_FRONTIER):
-    k     = len(mu)
-    g     = solve_gmvp_short(mu, cov) if allow_short else solve_gmvp_no_short(mu, cov)
-    tgts  = np.linspace(g["return"], mu.max() * (1.15 if allow_short else 1.0), n)
-    stds, rets = [], []
-    for t in tgts:
-        res = minimize(lambda w: w @ cov @ w, np.ones(k) / k, method="SLSQP",
-                       bounds=None if allow_short else [(0, 1)] * k,
-                       constraints=[
-                           {"type": "eq", "fun": lambda w: np.sum(w) - 1},
-                           {"type": "eq", "fun": lambda w, t=t: w @ mu - t},
-                       ],
-                       options={"ftol": 1e-12, "maxiter": 800})
-        if res.success:
-            _, s = port_perf(res.x, mu, cov)
-            stds.append(s); rets.append(t)
-    return {"std": stds, "ret": rets}
-
-
-def solve_optimal_portfolio(mu, cov, A, allow_short=False):
-    """Maximise U = w'μ − (A/2)·w'Σw  subject to Σw = 1 (and w ≥ 0 if no short)."""
-    n = len(mu)
-    def neg_utility(w):
-        return (A / 2) * float(w @ cov @ w) - float(w @ mu)
-    bounds = None if allow_short else [(0, 1)] * n
-    res = minimize(
-        neg_utility, np.ones(n) / n, method="SLSQP",
-        bounds=bounds,
-        constraints={"type": "eq", "fun": lambda w: np.sum(w) - 1},
-        options={"ftol": 1e-12, "maxiter": 1000},
-    )
-    r, s = port_perf(res.x, mu, cov)
     return {
-        "weights": res.x.tolist(),
-        "return":  r,
-        "std":     s,
-        "sharpe":  (r - RF_RATE) / s if s > 0 else 0,
-        "utility": round(float(r - (A / 2) * s ** 2), 6),
+        "risk_aversion":    A,
+        "profile":          name,
+        "colour":           col,
+        "description":      desc,
+        "utility_formula":  f"U = r - (σ² × {A}) / 2",
+        "risk_willingness": rw_scores,
+        "risk_capability":  rc_scores,
+        "final_risk_score": final_scores,
+        "delta":            delta,
+        "assessment":       message,
+        "explanation":      explanation,
     }
 
-
-_cache      = None   # computed once, reused for all subsequent /api/portfolio calls
-_math_cache = None   # stores (mu_a, cov_a) for /api/optimal
-
-
-def get_portfolio_data():
-    global _cache, _math_cache
-    if _cache:
-        return _cache
-    prices       = load_prices()
-    mu, cov, corr = compute_stats(prices)
-    mu_a, cov_a  = mu.values, cov.values
-    _math_cache  = (mu_a, cov_a)
-    _cache = {
-        "fund_names":        list(mu.index),
-        "returns":           mu_a.tolist(),
-        "std_devs":          np.sqrt(np.diag(cov_a)).tolist(),
-        "correlation":       corr.values.tolist(),
-        "gmvp_no_short":     solve_gmvp_no_short(mu_a, cov_a),
-        "gmvp_short":        solve_gmvp_short(mu_a, cov_a),
-        "frontier_no_short": build_frontier(mu_a, cov_a, allow_short=False),
-        "frontier_short":    build_frontier(mu_a, cov_a, allow_short=True),
-    }
-    return _cache
 
 # ─── ROUTES ───────────────────────────────────────────────────────────────────
 @app.route("/api/questions")
@@ -337,7 +192,7 @@ def api_score():
     body = request.get_json(silent=True)
     if not body or "answers" not in body:
         return jsonify({"error": "Missing 'answers' in request body."}), 400
-    ql = {q["id"]: q for q in QUESTIONS}
+    ql        = {q["id"]: q for q in QUESTIONS}
     score_map = {}
     try:
         for qid, opt_idx in body["answers"].items():
@@ -347,31 +202,45 @@ def api_score():
     return jsonify(compute_risk_aversion(score_map))
 
 
+@app.route("/api/portfolio")
+def api_portfolio():
+    try:
+        return jsonify(get_portfolio_data())
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e), "hint": "Run `python fetch_data.py` in backend/ to download data."}), 404
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/optimal")
 def api_optimal():
     try:
         A_val       = float(request.args.get("A", 5.0))
         allow_short = request.args.get("short", "false").lower() == "true"
         A_val       = max(1.0, min(10.0, A_val))
-        if _math_cache is None:
-            get_portfolio_data()   # warm the cache
-        mu_a, cov_a = _math_cache
+        mu_a, cov_a = get_math_cache()
         return jsonify(solve_optimal_portfolio(mu_a, cov_a, A_val, allow_short=allow_short))
     except FileNotFoundError as e:
         return jsonify({"error": str(e)}), 404
     except Exception as e:
-        import traceback; traceback.print_exc()
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/portfolio")
-def api_portfolio():
+@app.route("/api/fund-overview")
+def api_fund_overview():
+    """
+    Returns per-fund statistics and time-series data for the Fund Overview page.
+    Includes: returns, std devs, variances, sharpe ratios, covariance matrix,
+              correlation matrix, cumulative price series, rolling volatility series.
+    """
     try:
-        return jsonify(get_portfolio_data())
+        return jsonify(get_fund_overview())
     except FileNotFoundError as e:
-        return jsonify({"error": str(e), "hint": "Add your 10 Excel files to the ./data/ folder."}), 404
+        return jsonify({"error": str(e), "hint": "Run `python fetch_data.py` in backend/ to download data."}), 404
     except Exception as e:
-        import traceback; traceback.print_exc()
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 
@@ -388,9 +257,8 @@ def serve_react(path):
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5001))
     print(f"\n  ╔══════════════════════════════════════════╗")
     print(f"  ║  RoboAdvisor Flask API  →  port {port}     ║")
-    print(f"  ║  Data folder: {os.path.abspath(FOLDER):<27}║")
     print(f"  ╚══════════════════════════════════════════╝\n")
     app.run(debug=True, port=port)
