@@ -17,7 +17,7 @@ import os
 import yfinance as yf
 import pandas as pd
 
-TICKERS    = ["SPY", "QQQ", "XLV", "EWJ", "FXI", "EWZ", "EEM", "GLD", "VNQ", "SHY"]
+TICKERS    = ["SPY", "QQQ", "EEM", "IEV", "INDA", "VNQ", "GLD", "SHY", "HYG", "XLV"]
 START_DATE = "2019-01-01"
 END_DATE   = "2024-12-31"
 DATA_DIR   = os.path.join(os.path.dirname(__file__), "data")
