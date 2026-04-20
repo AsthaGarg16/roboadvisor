@@ -76,7 +76,10 @@ def solve_gmvp_no_short(mu, cov):
 
 
 def solve_gmvp_short(mu, cov):
-    ci   = np.linalg.inv(cov)
+    try:
+        ci = np.linalg.inv(cov)
+    except np.linalg.LinAlgError:
+        ci = np.linalg.inv(cov + np.eye(len(mu)) * 1e-6)
     ones = np.ones(len(mu))
     w    = ci @ ones / (ones @ ci @ ones)
     r, s = port_perf(w, mu, cov)
@@ -85,21 +88,36 @@ def solve_gmvp_short(mu, cov):
 
 
 def build_frontier(mu, cov, allow_short=False, n=N_FRONTIER):
-    k    = len(mu)
-    g    = solve_gmvp_short(mu, cov) if allow_short else solve_gmvp_no_short(mu, cov)
-    tgts = np.linspace(g["return"], mu.max() * (1.15 if allow_short else 1.0), n)
+    """
+    Constructs the full Markowitz bullet by sweeping returns from the
+    GMVP (minimum-variance) return down to mu.min() and up to mu.max()
+    (×1.2 when shorts allowed). Uses warm-starting for better convergence.
+    """
+    k      = len(mu)
+    g      = solve_gmvp_short(mu, cov) if allow_short else solve_gmvp_no_short(mu, cov)
+    spread = mu.max() - mu.min()
+    min_r  = g["return"] - spread * 1.5 if allow_short else mu.min()
+    max_r  = mu.max() * (1.3 if allow_short else 1.0)
+    tgts   = np.linspace(min_r, max_r, n)
+    bounds = None if allow_short else [(0, 1)] * k
+
     stds, rets = [], []
+    w0 = np.array(g["weights"])  # warm-start from GMVP weights
     for t in tgts:
-        res = minimize(lambda w: w @ cov @ w, np.ones(k) / k, method="SLSQP",
-                       bounds=None if allow_short else [(0, 1)] * k,
-                       constraints=[
-                           {"type": "eq", "fun": lambda w: np.sum(w) - 1},
-                           {"type": "eq", "fun": lambda w, t=t: w @ mu - t},
-                       ],
-                       options={"ftol": 1e-12, "maxiter": 800})
+        res = minimize(
+            lambda w: w @ cov @ w, w0, method="SLSQP",
+            bounds=bounds,
+            constraints=[
+                {"type": "eq", "fun": lambda w: np.sum(w) - 1},
+                {"type": "eq", "fun": lambda w, t=t: w @ mu - t},
+            ],
+            options={"ftol": 1e-12, "maxiter": 1000},
+        )
         if res.success:
             _, s = port_perf(res.x, mu, cov)
-            stds.append(s); rets.append(t)
+            stds.append(s)
+            rets.append(t)
+            w0 = res.x  # carry solution forward as next initial guess
     return {"std": stds, "ret": rets}
 
 

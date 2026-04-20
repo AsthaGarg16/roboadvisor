@@ -29,7 +29,7 @@ export default function HomePage() {
   return (
     <div className="page">
       <div className="page-header">
-        <div className="page-eyebrow">BMD5302 · Group Project · AY 2025/26</div>
+        <div className="page-eyebrow">Intelligent Portfolio Management</div>
         <h1 className="page-title">
           Intelligent<br/>
           <em style={{color:'var(--gold)'}}>Robot Adviser</em>
@@ -45,7 +45,7 @@ export default function HomePage() {
       </div>
 
       {/* Stats */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:32}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:16,marginBottom:32}}>
         {stats.map(s=>(
           <div key={s.label} className="card" style={{textAlign:'center',padding:'20px 16px'}}>
             <div style={{fontFamily:"'Lora',serif",fontSize:'2.13rem',fontStyle:'italic',color:'var(--text)'}}>{s.value}</div>
@@ -93,7 +93,7 @@ export default function HomePage() {
 
 const btnPrimary = {
   display:'inline-flex',alignItems:'center',gap:8,
-  background:'var(--gold)',color:'#000',fontWeight:700,
+  background:'var(--gold)',color:'var(--btn-text-on-gold)',fontWeight:700,
   fontSize:'.95rem',letterSpacing:'.03em',textTransform:'uppercase',
   padding:'12px 24px',borderRadius:99,textDecoration:'none',
 }

@@ -86,7 +86,7 @@ function Heatmap({ matrix, labels, title, isCovariance = false }) {
     }
   }
 
-  const isHov = (i, j) => hovered && (hovered.i === i || hovered.j === j || hovered.i === j || hovered.j === i)
+  const isHov = (i, j) => hovered && (hovered.i === i || hovered.j === j)
 
   return (
     <div>
@@ -150,7 +150,7 @@ function Heatmap({ matrix, labels, title, isCovariance = false }) {
                         : '1px solid var(--surface)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: cellSize > 44 ? 8 : 7,
-                      color: Math.abs(v) / absMax > 0.5 ? '#fff' : 'var(--text-muted)',
+                      color: Math.abs(v) / absMax > 0.5 ? 'var(--surface)' : 'var(--text-muted)',
                       fontFamily: "'IBM Plex Mono', monospace",
                       cursor: 'crosshair',
                       transition: 'border .1s, transform .1s',
@@ -326,7 +326,7 @@ export default function FundOverviewPage() {
       <div style={{ background: 'rgba(248,113,113,.08)', border: '1px solid var(--red)', borderRadius: 'var(--radius-lg)', padding: '28px 32px' }}>
         <div style={{ color: 'var(--red)', fontWeight: 600, marginBottom: 8 }}>Connection Error</div>
         <div style={{ color: 'var(--text-muted)', fontSize: '1.005rem', lineHeight: 1.6, marginBottom: 16 }}>{error}</div>
-        <button onClick={loadData} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--gold)', color: '#000', fontWeight: 700, fontSize: '.95rem', padding: '10px 20px', borderRadius: 99, border: 'none', cursor: 'pointer' }}>
+        <button onClick={loadData} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--gold)', color: 'var(--btn-text-on-gold)', fontWeight: 700, fontSize: '.95rem', padding: '10px 20px', borderRadius: 99, border: 'none', cursor: 'pointer' }}>
           <RefreshCw size={14}/> Retry
         </button>
       </div>
@@ -372,9 +372,9 @@ export default function FundOverviewPage() {
             <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" strokeOpacity={.5} vertical={false}/>
             <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontFamily: 'IBM Plex Mono' }}/>
             <YAxis tickFormatter={v => `${v}%`} tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'IBM Plex Mono' }}/>
-            <Tooltip content={<BarTooltip suffix="%" decimals={3}/>}/>
+            <Tooltip content={<BarTooltip suffix="%" decimals={3}/>} cursor={false}/>
             <ReferenceLine y={0} stroke="var(--border2)" strokeWidth={1}/>
-            <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48} cursor={false}>
               {returnsBarData.map((entry, i) => (
                 <Cell key={i} fill={entry.value >= 0 ? FUND_COLORS[i % FUND_COLORS.length] : '#f87171'}/>
               ))}
@@ -394,8 +394,8 @@ export default function FundOverviewPage() {
             <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" strokeOpacity={.5} vertical={false}/>
             <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontFamily: 'IBM Plex Mono' }}/>
             <YAxis tickFormatter={v => `${v}%`} tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'IBM Plex Mono' }}/>
-            <Tooltip content={<BarTooltip suffix="%" decimals={3}/>}/>
-            <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>
+            <Tooltip content={<BarTooltip suffix="%" decimals={3}/>} cursor={false}/>
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48} cursor={false}>
               {stdBarData.map((entry, i) => (
                 <Cell key={i} fill={FUND_COLORS[i % FUND_COLORS.length]} fillOpacity={0.85}/>
               ))}
