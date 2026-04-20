@@ -260,7 +260,7 @@ export default function PortfolioPage() {
               <Scatter name="Frontier" data={frontierLine}
                 line={{stroke:'var(--cyan)',strokeWidth:2}}
                 fill="var(--cyan)" fillOpacity={0.18} r={4}
-                lineJointType="monotoneX" isAnimationActive={false}/>
+                lineJointType="linear" isAnimationActive={false}/>
 
               {/* Individual funds */}
               {fundPoints.map((fp,i)=>(
