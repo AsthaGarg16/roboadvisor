@@ -43,6 +43,8 @@ export default function QuestionnairePage() {
       })
       const data = await res.json()
       setResult(data)
+      sessionStorage.setItem('lastAssessmentResult', JSON.stringify(data))
+      if (portfolioData) sessionStorage.setItem('lastPortfolioData', JSON.stringify(portfolioData))
     } catch (e) {
       setError('Submission failed. Check that Flask is running.')
     }

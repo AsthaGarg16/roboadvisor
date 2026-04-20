@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
-import { BarChart2, ClipboardList, Home, TrendingUp, Sun, Moon } from 'lucide-react'
+import { BarChart2, ClipboardList, Home, TrendingUp, Sun, Moon, Briefcase } from 'lucide-react'
 import HomePage from './pages/HomePage'
 import QuestionnairePage from './pages/QuestionnairePage'
 import PortfolioPage from './pages/PortfolioPage'
 import FundOverviewPage from './pages/FundOverviewPage'
+import MyPortfolioPage from './pages/MyPortfolioPage'
 import './App.css'
 
 function useTheme() {
@@ -47,6 +48,9 @@ function Nav({ theme, toggle }) {
         <NavLink to="/questionnaire" className={({isActive})=>`nav-item${isActive?' active':''}`}>
           <ClipboardList size={16}/> <span>Risk Profile</span>
         </NavLink>
+        <NavLink to="/my-portfolio" className={({isActive})=>`nav-item${isActive?' active':''}`}>
+          <Briefcase size={16}/> <span>My Portfolio</span>
+        </NavLink>
         <NavLink to="/portfolio" className={({isActive})=>`nav-item${isActive?' active':''}`}>
           <TrendingUp size={16}/> <span>Frontier &amp; Analytics</span>
         </NavLink>
@@ -72,6 +76,9 @@ function MobileNav({ theme, toggle }) {
         <NavLink to="/questionnaire" className={({isActive})=>`mobile-nav-item${isActive?' active':''}`}>
           <ClipboardList size={20}/><span>Profile</span>
         </NavLink>
+        <NavLink to="/my-portfolio" className={({isActive})=>`mobile-nav-item${isActive?' active':''}`}>
+          <Briefcase size={20}/><span>Portfolio</span>
+        </NavLink>
         <NavLink to="/portfolio" className={({isActive})=>`mobile-nav-item${isActive?' active':''}`}>
           <TrendingUp size={20}/><span>Frontier</span>
         </NavLink>
@@ -95,6 +102,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/questionnaire" element={<QuestionnairePage />} />
+            <Route path="/my-portfolio" element={<MyPortfolioPage />} />
             <Route path="/portfolio" element={<PortfolioPage />} />
             <Route path="/funds" element={<FundOverviewPage />} />
           </Routes>
