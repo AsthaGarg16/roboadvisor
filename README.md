@@ -1,142 +1,6 @@
 # RoboAdvisor
 
-A web-based robo-advisor that builds a personalised investment portfolio for any investor. The user answers a short questionnaire, receives a risk profile, sets a savings goal, and is shown an optimised portfolio drawn from a universe of funds — complete with an efficient frontier, allocation breakdown, and downloadable PDF report.
-
----
-
-## What the App Does
-
-From an investor's perspective, the experience has four steps:
-
-1. **Overview** — landing page that explains how the tool works.
-2. **Risk Profile** — a 10-question questionnaire that measures both the investor's *willingness* to take risk (attitude, behaviour) and their *capacity* to take risk (income, liquidity, obligations). The system reconciles the two dimensions and assigns a risk aversion score from 1 (aggressive) to 10 (conservative).
-3. **Portfolio Recommendation** — given the investor's risk aversion, the app solves for the portfolio that maximises their utility `U = r − (A/2)·σ²`. The investor inputs a target amount and time horizon; the app back-calculates the required annual return and colour-codes whether that target is achievable, challenging, or unrealistic.
-4. **Fund Overview** — deep-dive analytics on each individual fund: cumulative return, rolling volatility, Sharpe ratio, and a correlation heatmap to understand diversification.
-
----
-
-## How the Questionnaire Works
-
-The 10 questions are split into two blocks:
-
-| Block | Questions | What it measures |
-|-------|-----------|-----------------|
-| **Risk Willingness** (attitude) | Q1–Q5 | Investment goal, portfolio preference, reaction to drawdowns, fear of loss vs. inflation, maximum tolerable loss |
-| **Risk Capacity** (financial) | Q6–Q10 | Investment horizon, income stability, liquidity reserves, debt/dependents, goal-timing flexibility |
-
-Each answer carries a raw score on a 1–10 scale (1 = most conservative, 10 = most aggressive). Within each block, scores are averaged:
-
-```
-RW = mean of Q1–Q5 scores
-RC = mean of Q6–Q10 scores
-```
-
-The **final risk score** is `min(RW, RC)` — the binding constraint. Risk aversion is then:
-
-```
-A = 11 − final_risk_score          A ∈ [1, 10]
-```
-
-The gap between the two blocks also generates an advisory message:
-
-| Delta (RW − RC) | Message |
-|-----------------|---------|
-| ≥ 2.0 | **Risk Alert** — willingness exceeds capacity; portfolio capped at capacity |
-| ≤ −2.0 | **Educational Insight** — capacity exceeds willingness; investor may be too cautious |
-| Otherwise | **Risk Profile Aligned** |
-
-Five named profiles map onto the A scale:
-
-| A range | Profile |
-|---------|---------|
-| ≤ 2 | Aggressive |
-| ≤ 4 | Moderately Aggressive |
-| ≤ 6 | Balanced |
-| ≤ 8 | Moderately Conservative |
-| ≤ 10 | Conservative |
-
----
-
-## How the Portfolio is Calculated
-
-### 1. Data
-
-Daily closing prices for each fund are loaded from Excel files in `backend/data/`. Log-returns are computed and annualised (×252 trading days) to produce a vector of expected returns **μ** and a covariance matrix **Σ**.
-
-### 2. Efficient Frontier
-
-The app traces 120 points along the mean-variance efficient frontier by solving, for each target return *t*:
-
-```
-min   w'Σw
- w
-s.t.  w'μ = t
-      Σwᵢ = 1
-      wᵢ ≥ 0  (long-only constraint; a short-selling toggle is also available)
-```
-
-The **Global Minimum Variance Portfolio (GMVP)** anchors the left end of the frontier.
-
-### 3. Optimal Portfolio
-
-Given the investor's risk aversion coefficient *A*, the recommended portfolio maximises the mean-variance utility:
-
-```
-max   U = w'μ − (A/2) · w'Σw
- w
-s.t.  Σwᵢ = 1,  wᵢ ≥ 0
-```
-
-This is solved numerically with SciPy SLSQP. The result is a set of fund weights that sits on the efficient frontier at the point of tangency with the investor's indifference curve.
-
-### 4. Goal Planner
-
-The investor enters a current portfolio value *P₀*, a target value *P_T*, and an investment horizon *T* (years). The required annual return is:
-
-```
-r_required = (P_T / P₀)^(1/T) − 1
-```
-
-This is compared against the optimal portfolio's expected return and colour-coded:
-
-| Required return | Status |
-|----------------|--------|
-| < 6% | Achievable (green) |
-| 6–10% | Challenging (amber) |
-| 10–20% | High — review assumptions (red) |
-| > 20% | Unrealistic (red + warning) |
-
----
-
-## Project Structure
-
-```
-roboadvisor/
-├── backend/               ← Python / Flask API
-│   ├── app.py             ← routes, questionnaire logic, risk scoring
-│   ├── portfolio_math.py  ← all quantitative finance (returns, frontier, optimiser)
-│   ├── fetch_data.py      ← downloads fund price data via yfinance
-│   ├── generate_charts.py ← static PNG charts (optional)
-│   ├── requirements.txt
-│   └── data/              ← Excel price files (one per fund)
-│
-├── frontend/              ← React / Vite SPA
-│   ├── src/
-│   │   ├── App.jsx        ← router + side-navigation
-│   │   ├── pages/
-│   │   │   ├── HomePage.jsx
-│   │   │   ├── QuestionnairePage.jsx
-│   │   │   ├── PortfolioPage.jsx
-│   │   │   └── FundOverviewPage.jsx
-│   │   └── components/
-│   │       └── ResultDashboard.jsx
-│   ├── index.html
-│   ├── package.json
-│   └── vite.config.js
-│
-├── setup.py               ← one-command setup (cross-platform)
-└── README.md
-```
+A web-based robo-advisor that builds a personalised investment portfolio for any investor. The user answers a short questionnaire, receives a risk profile, sets savings goals, and is shown an optimised portfolio drawn from a universe of funds — complete with an efficient frontier, allocation breakdown, covariance/correlation heatmaps, and a downloadable PDF report.
 
 ---
 
@@ -152,7 +16,7 @@ roboadvisor/
 
 ### 1 — Install dependencies
 
-Run the setup script from the repo root. It creates a Python virtual environment under `backend/venv/` and runs `npm install` for the frontend — works on Mac, Linux, and Windows.
+Run the setup script from the repo root. It creates a Python virtual environment under `backend/venv/` and installs all frontend packages.
 
 ```bash
 python setup.py
@@ -162,10 +26,10 @@ python setup.py
 
 ```bash
 cd backend
-python fetch_data.py        # downloads price data into ./data/
+python fetch_data.py        # downloads price history into ./data/
 ```
 
-Or copy your own `.xlsx` files into `backend/data/` (column 0 = Date, column 1 = Price).
+Or drop your own `.xlsx` files into `backend/data/` (column 0 = Date, column 1 = Adjusted Close Price).
 
 ### 3 — Start the backend
 
@@ -177,16 +41,150 @@ cd backend && source venv/bin/activate && python app.py
 cd backend && venv\Scripts\activate && python app.py
 ```
 
-The API is available at **http://localhost:5001**.
+Flask API available at **http://localhost:5001**.
 
 ### 4 — Start the frontend
 
 ```bash
 cd frontend
-npm run dev                 # → http://localhost:5173
+npm run dev
 ```
 
 Open **http://localhost:5173** in your browser.
+
+---
+
+## What the App Does
+
+The sidebar has five sections:
+
+| Tab | Description |
+|-----|-------------|
+| **Overview** | Landing page explaining how the tool works |
+| **Risk Profile** | 10-question questionnaire → risk aversion score + profile |
+| **My Portfolio** | Your most recent portfolio recommendation, cached across navigation (clears on refresh) |
+| **Frontier & Analytics** | Live efficient frontier, GMVP, correlation heatmap, fund scatter |
+| **Fund Overview** | Per-fund deep-dive: cumulative return, rolling volatility, Sharpe ratio, covariance matrix |
+
+---
+
+## How the Questionnaire Works
+
+Ten questions split into two blocks:
+
+| Block | Questions | What it measures |
+|-------|-----------|-----------------|
+| **Risk Willingness** | Q1–Q5 | Investment goal, portfolio preference, reaction to drawdowns, fear of loss vs. inflation, max tolerable loss |
+| **Risk Capacity** | Q6–Q10 | Investment horizon, income stability, liquidity reserves, debt/dependents, goal-timing flexibility |
+
+Each answer scores 1–10 (1 = most conservative, 10 = most aggressive). Block averages are computed:
+
+```
+RW = mean(Q1–Q5)
+RC = mean(Q6–Q10)
+final_score = min(RW, RC)      ← binding constraint
+A = 11 − final_score           ← risk aversion, A ∈ [1, 10]
+```
+
+The gap between blocks generates an advisory message:
+
+| Delta (RW − RC) | Message |
+|-----------------|---------|
+| ≥ 2.0 | Risk Alert — willingness exceeds capacity |
+| ≤ −2.0 | Educational Insight — capacity exceeds willingness |
+| Otherwise | Risk Profile Aligned |
+
+Risk profiles by A:
+
+| A range | Profile |
+|---------|---------|
+| ≤ 2 | Aggressive |
+| ≤ 4 | Moderately Aggressive |
+| ≤ 6 | Balanced |
+| ≤ 8 | Moderately Conservative |
+| ≤ 10 | Conservative |
+
+---
+
+## How the Portfolio is Calculated
+
+### 1. Data
+
+Daily closing prices are loaded from `backend/data/`. Log-returns are computed and annualised (×252 trading days) to produce expected returns **μ** and covariance matrix **Σ**.
+
+### 2. Efficient Frontier
+
+120 points traced by solving, for each target return *t*:
+
+```
+min   w'Σw
+ w
+s.t.  w'μ = t,   Σwᵢ = 1,   wᵢ ≥ 0
+```
+
+A short-selling toggle removes the non-negativity constraint. The **GMVP** anchors the left end.
+
+### 3. Optimal Portfolio
+
+Maximises mean-variance utility for the investor's risk aversion *A*:
+
+```
+max   U = w'μ − (A/2) · w'Σw
+ w
+s.t.  Σwᵢ = 1,   wᵢ ≥ 0
+```
+
+Solved with SciPy SLSQP. The result sits on the efficient frontier at the tangency point with the investor's indifference curve.
+
+### 4. Goal Planner
+
+Given investable capital *P₀*, target value *P_T*, and horizon *T* years:
+
+```
+r_required = (P_T / P₀)^(1/T) − 1
+```
+
+Colour-coded against the portfolio's expected return:
+
+| Required return | Status |
+|----------------|--------|
+| < 6% | Achievable |
+| 6–10% | Challenging |
+| 10–20% | High — review assumptions |
+| > 20% | Unrealistic |
+
+---
+
+## Project Structure
+
+```
+roboadvisor/
+├── backend/
+│   ├── app.py               ← Flask API, questionnaire logic, risk scoring
+│   ├── portfolio_math.py    ← returns, covariance, frontier, SLSQP optimiser
+│   ├── fetch_data.py        ← downloads fund price data via yfinance
+│   ├── generate_charts.py   ← static PNG charts (optional)
+│   ├── requirements.txt
+│   └── data/                ← Excel price files (one per fund)
+│
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx              ← router, side-navigation, theme toggle
+│   │   ├── pages/
+│   │   │   ├── HomePage.jsx
+│   │   │   ├── QuestionnairePage.jsx
+│   │   │   ├── MyPortfolioPage.jsx  ← cached assessment result
+│   │   │   ├── PortfolioPage.jsx
+│   │   │   └── FundOverviewPage.jsx
+│   │   └── components/
+│   │       └── ResultDashboard.jsx  ← full results UI (charts, tables, PDF export)
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.js
+│
+├── setup.py                 ← one-command setup (cross-platform)
+└── README.md
+```
 
 ---
 
@@ -194,11 +192,11 @@ Open **http://localhost:5173** in your browser.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/questions` | Returns the 10 questionnaire questions (scores hidden) |
-| POST | `/api/score` | Accepts answers, returns A, profile, willingness/capacity split |
-| GET | `/api/portfolio` | Frontier, GMVP, fund stats, correlation matrix |
+| GET | `/api/questions` | Returns the 10 questionnaire questions |
+| POST | `/api/score` | Accepts answers, returns A, profile, willingness/capacity breakdown |
+| GET | `/api/portfolio` | Frontier points, GMVP, fund stats, correlation matrix |
 | GET | `/api/optimal?A=<value>` | Optimal weights for a given risk aversion *A* |
-| GET | `/api/fund-overview` | Per-fund stats + cumulative return + rolling volatility series |
+| GET | `/api/fund-overview` | Per-fund stats, cumulative returns, rolling volatility series |
 
 ---
 
@@ -206,7 +204,7 @@ Open **http://localhost:5173** in your browser.
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend framework | React 19 + Vite 8 |
+| Frontend | React 19 + Vite 8 |
 | Routing | React Router v7 |
 | Charts | Recharts |
 | Icons | Lucide React |

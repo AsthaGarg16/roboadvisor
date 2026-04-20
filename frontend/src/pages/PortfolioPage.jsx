@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   ScatterChart, Scatter, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, ReferenceDot, Cell
+  ResponsiveContainer, ReferenceDot, ReferenceLine, Cell
 } from 'recharts'
 import { RefreshCw, TrendingUp, BarChart2, Grid, Info } from 'lucide-react'
 
@@ -21,12 +21,18 @@ function ScatterTooltip({ active, payload }) {
   if (!active || !payload?.length) return null
   const d = payload[0]?.payload
   if (!d) return null
+  const row = (label, val, accent) => (
+    <div style={{display:'flex',justifyContent:'space-between',gap:20,marginTop:4}}>
+      <span style={{color:'var(--text-muted)'}}>{label}</span>
+      <span style={{color: accent || 'var(--text)'}}>{val}</span>
+    </div>
+  )
   return (
-    <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px',fontSize:'.9rem',fontFamily:"'IBM Plex Mono',monospace"}}>
-      {d.name && <div style={{color:'var(--gold)',marginBottom:4,fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>{d.name}</div>}
-      <div style={{color:'var(--text-muted)'}}>σ &nbsp;<span style={{color:'var(--text)'}}>{(+d.x).toFixed(2)}%</span></div>
-      <div style={{color:'var(--text-muted)'}}>r &nbsp;<span style={{color:'var(--text)'}}>{(+d.y).toFixed(2)}%</span></div>
-      {d.sharpe !== undefined && <div style={{color:'var(--text-muted)'}}>Sharpe <span style={{color:'var(--gold)'}}>{(+d.sharpe).toFixed(3)}</span></div>}
+    <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px',fontSize:'.85rem',fontFamily:"'IBM Plex Mono',monospace",minWidth:160}}>
+      {d.name && <div style={{color:'var(--gold)',marginBottom:6,fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:'.9rem'}}>{d.name}</div>}
+      {row('σ (risk)',   `${(+d.x).toFixed(2)}%`)}
+      {row('r (return)', `${(+d.y).toFixed(2)}%`, (+d.y) >= 0 ? 'var(--green)' : 'var(--red)')}
+      {d.sharpe != null && row('Sharpe', (+d.sharpe).toFixed(3), 'var(--gold)')}
     </div>
   )
 }
@@ -37,7 +43,7 @@ function ScatterTooltip({ active, payload }) {
 function CorrelationHeatmap({ matrix, labels }) {
   if (!matrix || !labels) return null
   const n = labels.length
-  const cellSize = Math.min(52, Math.floor(560 / n))
+  const cellSize = Math.min(52, Math.floor((window.innerWidth - 340) / n))
 
   function getColor(v) {
     // -1 → red, 0 → surface2, +1 → gold
@@ -78,7 +84,7 @@ function CorrelationHeatmap({ matrix, labels }) {
                   border:'1px solid var(--surface)',
                   display:'flex',alignItems:'center',justifyContent:'center',
                   fontSize: cellSize > 40 ? 9 : 7,
-                  color: Math.abs(v) > 0.5 ? '#fff' : 'var(--text-muted)',
+                  color: Math.abs(v) > 0.5 ? 'var(--surface)' : 'var(--text-muted)',
                   fontFamily:"'IBM Plex Mono',monospace",
                   cursor:'default',
                   transition:'transform .15s',
@@ -169,7 +175,7 @@ export default function PortfolioPage() {
       <div style={{background:'rgba(248,113,113,.08)',border:'1px solid var(--red)',borderRadius:'var(--radius-lg)',padding:'28px 32px'}}>
         <div style={{color:'var(--red)',fontWeight:600,marginBottom:8}}>Connection Error</div>
         <div style={{color:'var(--text-muted)',fontSize:'1.005rem',lineHeight:1.6,marginBottom:16}}>{error}</div>
-        <button onClick={loadData} style={{display:'inline-flex',alignItems:'center',gap:8,background:'var(--gold)',color:'#000',fontWeight:700,fontSize:'.95rem',padding:'10px 20px',borderRadius:99,border:'none',cursor:'pointer'}}>
+        <button onClick={loadData} style={{display:'inline-flex',alignItems:'center',gap:8,background:'var(--gold)',color:'var(--btn-text-on-gold)',fontWeight:700,fontSize:'.95rem',padding:'10px 20px',borderRadius:99,border:'none',cursor:'pointer'}}>
           <RefreshCw size={14}/> Retry
         </button>
       </div>
@@ -185,14 +191,16 @@ export default function PortfolioPage() {
   const fundPoints = fund_names.map((name,i)=>({
     x: +(std_devs[i]*100).toFixed(3),
     y: +(returns[i]*100).toFixed(3),
+    sharpe: std_devs[i] > 0 ? +(returns[i] / std_devs[i]).toFixed(4) : 0,
     name,
     color: FUND_COLORS[i % FUND_COLORS.length],
   }))
 
-  /* Frontier line data */
+  /* Frontier line data — include sharpe per point so tooltip can show it */
   const frontierLine = activeFrontier.std.map((s,i)=>({
     x: +(s*100).toFixed(3),
     y: +(activeFrontier.ret[i]*100).toFixed(3),
+    sharpe: s > 0 ? +(activeFrontier.ret[i] / s).toFixed(4) : 0,
   }))
 
   const gmvpPoint = [{
@@ -219,7 +227,7 @@ export default function PortfolioPage() {
           <button key={t.id} onClick={()=>setActiveTab(t.id)}
             style={{fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:'.93rem',letterSpacing:'.06em',textTransform:'uppercase',padding:'9px 20px',borderRadius:99,border:'1.5px solid',cursor:'pointer',transition:'all .2s',
               background:activeTab===t.id?'var(--gold)':'transparent',
-              color:activeTab===t.id?'#000':'var(--text-muted)',
+              color:activeTab===t.id?'var(--btn-text-on-gold)':'var(--text-muted)',
               borderColor:activeTab===t.id?'var(--gold)':'var(--border2)',
             }}>
             {t.label}
@@ -228,24 +236,31 @@ export default function PortfolioPage() {
       </div>
 
       {/* ── Frontier + GMVP stats ── */}
-      <div style={{display:'grid',gridTemplateColumns:'1fr 280px',gap:20,marginBottom:24}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 260px',gap:20,marginBottom:24,alignItems:'start'}}>
 
         {/* Chart */}
         <div className="card" style={{padding:'24px 20px 16px'}}>
           <div className="card-title"><TrendingUp size={14}/> Efficient Frontier</div>
-          <ResponsiveContainer width="100%" height={380}>
-            <ScatterChart margin={{top:10,right:20,bottom:20,left:10}}>
+          <ResponsiveContainer width="100%" height={600}>
+            <ScatterChart margin={{top:16,right:24,bottom:28,left:10}}>
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" strokeOpacity={.5}/>
-              <XAxis dataKey="x" name="Risk (σ %)" type="number" domain={['auto','auto']}
-                label={{value:'Annualised σ (%)',position:'insideBottom',offset:-8,fill:'var(--text-muted)',fontSize:11}}
-                tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
-              <YAxis dataKey="y" name="Return (%)" type="number" domain={['auto','auto']} width={70}
+              <XAxis dataKey="x" name="σ (%)" type="number" domain={['auto','auto']}
+                label={{value:'Annualised σ (%)',position:'insideBottom',offset:-12,fill:'var(--text-muted)',fontSize:11}}
+                tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}
+                tickCount={8}
+                axisLine={false} tickLine={false}/>
+              <YAxis dataKey="y" name="r (%)" type="number" domain={['auto','auto']} width={72}
                 label={{value:'Annualised Return (%)',angle:-90,position:'insideLeft',style:{textAnchor:'middle'},fill:'var(--text-muted)',fontSize:11}}
-                tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
+                tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}
+                tickCount={8}/>
               <Tooltip content={<ScatterTooltip/>}/>
+              <ReferenceLine y={0} stroke="var(--text-muted)" strokeWidth={1.5} strokeDasharray="4 3"/>
 
-              {/* Frontier line (use Line via LineChart trick: render as dots) */}
-              <Scatter name="Frontier" data={frontierLine} line={{stroke:'var(--cyan)',strokeWidth:2}} fill="transparent" lineJointType="monotoneX"/>
+              {/* Frontier — small semi-transparent dots so each point is hoverable */}
+              <Scatter name="Frontier" data={frontierLine}
+                line={{stroke:'var(--cyan)',strokeWidth:2}}
+                fill="var(--cyan)" fillOpacity={0.18} r={4}
+                lineJointType="monotoneX" isAnimationActive={false}/>
 
               {/* Individual funds */}
               {fundPoints.map((fp,i)=>(
@@ -350,21 +365,47 @@ export default function PortfolioPage() {
         <div style={{fontSize:'.93rem',color:'var(--text-muted)',marginBottom:16}}>
           The unconstrained frontier (short sales) is always at least as efficient as the constrained one.
         </div>
-        <ResponsiveContainer width="100%" height={340}>
-          <ScatterChart margin={{top:10,right:20,bottom:20,left:10}}>
+        <ResponsiveContainer width="100%" height={600}>
+          <ScatterChart margin={{top:16,right:24,bottom:28,left:10}}>
             <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" strokeOpacity={.4}/>
-            <XAxis dataKey="x" name="Risk (σ%)" type="number" domain={['auto','auto']}
-              label={{value:'σ (%)',position:'insideBottom',offset:-8,fill:'var(--text-muted)',fontSize:11}}
-              tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
-            <YAxis dataKey="y" name="Return (%)" type="number" domain={['auto','auto']}
-              label={{value:'Return (%)',angle:-90,position:'insideLeft',offset:12,fill:'var(--text-muted)',fontSize:11}}
-              tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
+            <XAxis dataKey="x" name="σ (%)" type="number" domain={['auto','auto']}
+              label={{value:'Annualised σ (%)',position:'insideBottom',offset:-12,fill:'var(--text-muted)',fontSize:11}}
+              tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}
+              tickCount={8} axisLine={false} tickLine={false}/>
+            <YAxis dataKey="y" name="r (%)" type="number" domain={['auto','auto']} width={72}
+              label={{value:'Annualised Return (%)',angle:-90,position:'insideLeft',style:{textAnchor:'middle'},fill:'var(--text-muted)',fontSize:11}}
+              tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}
+              tickCount={8}/>
             <Tooltip content={<ScatterTooltip/>}/>
-            <Legend wrapperStyle={{fontSize:'.9rem',color:'var(--text-muted)',paddingTop:8}}/>
-            <Scatter name="No Short Sales" data={frontier_no_short.std.map((s,i)=>({x:+(s*100).toFixed(3),y:+(frontier_no_short.ret[i]*100).toFixed(3)}))} line={{stroke:'var(--cyan)',strokeWidth:2}} fill="transparent"/>
-            <Scatter name="Short Sales Allowed" data={frontier_short.std.map((s,i)=>({x:+(s*100).toFixed(3),y:+(frontier_short.ret[i]*100).toFixed(3)}))} line={{stroke:'var(--gold)',strokeWidth:2,strokeDasharray:'5 3'}} fill="transparent"/>
-            <Scatter name="GMVP (No Short)" data={[{x:+(gmvp_no_short.std*100).toFixed(3),y:+(gmvp_no_short.return*100).toFixed(3),name:'GMVP (No Short)'}]} fill="var(--cyan)" r={8}/>
-            <Scatter name="GMVP (Short)" data={[{x:+(gmvp_short.std*100).toFixed(3),y:+(gmvp_short.return*100).toFixed(3),name:'GMVP (Short)'}]} fill="var(--gold)" r={8}/>
+            <ReferenceLine y={0} stroke="var(--text-muted)" strokeWidth={1.5} strokeDasharray="4 3"/>
+            <Legend wrapperStyle={{fontSize:'.85rem',color:'var(--text-muted)',paddingTop:12}}/>
+            <Scatter
+              name="No Short Sales"
+              data={frontier_no_short.std.map((s,i)=>({
+                x: +(s*100).toFixed(3),
+                y: +(frontier_no_short.ret[i]*100).toFixed(3),
+                sharpe: s > 0 ? +(frontier_no_short.ret[i]/s).toFixed(4) : 0,
+              }))}
+              line={{stroke:'var(--cyan)',strokeWidth:2}}
+              fill="var(--cyan)" fillOpacity={0.18} r={4}
+              isAnimationActive={false}/>
+            <Scatter
+              name="Short Sales Allowed"
+              data={frontier_short.std.map((s,i)=>({
+                x: +(s*100).toFixed(3),
+                y: +(frontier_short.ret[i]*100).toFixed(3),
+                sharpe: s > 0 ? +(frontier_short.ret[i]/s).toFixed(4) : 0,
+              }))}
+              line={{stroke:'var(--gold)',strokeWidth:2}}
+              strokeDasharray="5 3"
+              fill="var(--gold)" fillOpacity={0.18} r={4}
+              isAnimationActive={false}/>
+            <Scatter name="GMVP (No Short)"
+              data={[{x:+(gmvp_no_short.std*100).toFixed(3),y:+(gmvp_no_short.return*100).toFixed(3),name:'GMVP (No Short)',sharpe:gmvp_no_short.sharpe}]}
+              fill="var(--cyan)" r={9}/>
+            <Scatter name="GMVP (Short)"
+              data={[{x:+(gmvp_short.std*100).toFixed(3),y:+(gmvp_short.return*100).toFixed(3),name:'GMVP (Short)',sharpe:gmvp_short.sharpe}]}
+              fill="var(--gold)" r={9}/>
           </ScatterChart>
         </ResponsiveContainer>
       </div>

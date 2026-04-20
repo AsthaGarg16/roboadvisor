@@ -76,7 +76,10 @@ def solve_gmvp_no_short(mu, cov):
 
 
 def solve_gmvp_short(mu, cov):
-    ci   = np.linalg.inv(cov)
+    try:
+        ci = np.linalg.inv(cov)
+    except np.linalg.LinAlgError:
+        ci = np.linalg.inv(cov + np.eye(len(mu)) * 1e-6)
     ones = np.ones(len(mu))
     w    = ci @ ones / (ones @ ci @ ones)
     r, s = port_perf(w, mu, cov)
@@ -85,21 +88,47 @@ def solve_gmvp_short(mu, cov):
 
 
 def build_frontier(mu, cov, allow_short=False, n=N_FRONTIER):
-    k    = len(mu)
-    g    = solve_gmvp_short(mu, cov) if allow_short else solve_gmvp_no_short(mu, cov)
-    tgts = np.linspace(g["return"], mu.max() * (1.15 if allow_short else 1.0), n)
-    stds, rets = [], []
-    for t in tgts:
-        res = minimize(lambda w: w @ cov @ w, np.ones(k) / k, method="SLSQP",
-                       bounds=None if allow_short else [(0, 1)] * k,
-                       constraints=[
-                           {"type": "eq", "fun": lambda w: np.sum(w) - 1},
-                           {"type": "eq", "fun": lambda w, t=t: w @ mu - t},
-                       ],
-                       options={"ftol": 1e-12, "maxiter": 800})
-        if res.success:
-            _, s = port_perf(res.x, mu, cov)
-            stds.append(s); rets.append(t)
+    """
+    Constructs the full Markowitz bullet with two warm-started passes:
+      1. GMVP → max_return  (efficient upper arm)
+      2. GMVP → min_return  (inefficient lower arm, reversed so warm-start stays close)
+    This ensures both arms converge reliably under long-only constraints.
+    """
+    k      = len(mu)
+    g      = solve_gmvp_short(mu, cov) if allow_short else solve_gmvp_no_short(mu, cov)
+    spread = mu.max() - mu.min()
+    min_r  = g["return"] - spread * 1.5 if allow_short else mu.min()
+    max_r  = mu.max() * (1.3 if allow_short else 1.0)
+    bounds = None if allow_short else [(0, 1)] * k
+    half   = n // 2
+
+    def _sweep(targets, w_start):
+        stds, rets, w0 = [], [], np.array(w_start)
+        for t in targets:
+            res = minimize(
+                lambda w: w @ cov @ w, w0, method="SLSQP",
+                bounds=bounds,
+                constraints=[
+                    {"type": "eq", "fun": lambda w: np.sum(w) - 1},
+                    {"type": "eq", "fun": lambda w, t=t: w @ mu - t},
+                ],
+                options={"ftol": 1e-12, "maxiter": 1000},
+            )
+            if res.success:
+                _, s = port_perf(res.x, mu, cov)
+                stds.append(s)
+                rets.append(t)
+                w0 = res.x
+        return stds, rets
+
+    # Upper arm: GMVP → max_r
+    up_stds, up_rets = _sweep(np.linspace(g["return"], max_r, half), g["weights"])
+    # Lower arm: GMVP → min_r (sweep reversed so warm-start descends from GMVP)
+    lo_stds, lo_rets = _sweep(np.linspace(g["return"], min_r, half), g["weights"])
+
+    # Combine: lower arm reversed + upper arm (gives continuous left-to-right ordering)
+    stds = lo_stds[::-1] + up_stds
+    rets = lo_rets[::-1] + up_rets
     return {"std": stds, "ret": rets}
 
 

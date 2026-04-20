@@ -12,15 +12,45 @@
   --cyan:       #38bdf8;
   --cyan-dim:   #0369a1;
   --red:        #f87171;
+  --red-glow:   rgba(248,113,113,0.1);
   --green:      #4ade80;
+  --green-glow: rgba(74,222,128,0.1);
   --text:       #f1f5f9;
   --text-muted: #94a3b8;
   --text-dim:   #506070;
-  --radius:     10px;
-  --radius-lg:  18px;
+  --radius:            10px;
+  --radius-lg:         18px;
+  --card-shadow:       none;
+  --btn-text-on-gold:  #000;
+}
+
+[data-theme="light"] {
+  --bg:         #eef2f7;
+  --surface:    #ffffff;
+  --surface2:   #e2eaf3;
+  --border:     #c8d5e3;
+  --border2:    #a8bdd4;
+  --gold:       #7a5600;
+  --gold-dim:   #b88a00;
+  --gold-glow:  rgba(122,86,0,0.1);
+  --cyan:       #0369a1;
+  --cyan-dim:   #bae6fd;
+  --red:        #b91c1c;
+  --red-glow:   rgba(185,28,28,0.08);
+  --green:      #15803d;
+  --green-glow: rgba(21,128,61,0.08);
+  --text:       #0f172a;
+  --text-muted: #475569;
+  --text-dim:   #94a3b8;
+  --card-shadow:       0 1px 3px rgba(0,0,0,0.07), 0 4px 14px rgba(0,0,0,0.05);
+  --btn-text-on-gold:  #fff;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body, .sidenav, .card, .main-content, .mobile-nav {
+  transition: background-color .25s, border-color .25s, color .25s;
+}
 html { scroll-behavior: smooth; }
 
 body {
@@ -41,7 +71,10 @@ body::before {
   background-size: 48px 48px;
   opacity: 0.18;
   pointer-events: none;
+  transition: opacity .3s;
 }
+
+[data-theme="light"] body::before { opacity: 0.4; }
 
 #root { position: relative; z-index: 1; }
 

@@ -43,6 +43,8 @@ export default function QuestionnairePage() {
       })
       const data = await res.json()
       setResult(data)
+      sessionStorage.setItem('lastAssessmentResult', JSON.stringify(data))
+      if (portfolioData) sessionStorage.setItem('lastPortfolioData', JSON.stringify(portfolioData))
     } catch (e) {
       setError('Submission failed. Check that Flask is running.')
     }
@@ -109,7 +111,7 @@ export default function QuestionnairePage() {
             {q.options.map((label, idx) => (
               <button key={idx} onClick={() => pick(idx)} style={optStyle(selected === idx)}>
                 <div style={bulletStyle(selected === idx)}>
-                  {selected === idx && <CheckCircle size={12} style={{color:'#000'}}/>}
+                  {selected === idx && <CheckCircle size={12} style={{color:'var(--bg)'}}/>}
                 </div>
                 <span style={{fontFamily:"Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",fontSize:'.9rem',lineHeight:1.5,textAlign:'left'}}>{label}</span>
                 <span style={{marginLeft:'auto',fontFamily:"'IBM Plex Mono',monospace",fontSize:'.83rem',
@@ -164,7 +166,7 @@ function bulletStyle(sel) {
   return {
     width:20,height:20,minWidth:20,borderRadius:'50%',
     border:`2px solid ${sel?'var(--gold)':'var(--border2)'}`,
-    background:sel?'var(--gold)':'transparent',
+    background:sel?'var(--gold)':'var(--surface)',
     display:'flex',alignItems:'center',justifyContent:'center',
     transition:'all .15s',
   }
@@ -176,7 +178,7 @@ function navBtn(primary) {
     letterSpacing:'.06em',textTransform:'uppercase',
     padding:'11px 22px',borderRadius:99,cursor:'pointer',
     background:primary?'var(--gold)':'transparent',
-    color:primary?'#000':'var(--text-muted)',
+    color:primary?'var(--btn-text-on-gold)':'var(--text-muted)',
     border:primary?'none':'1px solid var(--border2)',
     transition:'opacity .2s',
   }
