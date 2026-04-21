@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import ResultDashboard from '../components/ResultDashboard'
 
 const API = 'http://localhost:5001'
 
 export default function QuestionnairePage() {
+  const navigate        = useNavigate()
   const [questions,     setQuestions]     = useState([])
   const [current,       setCurrent]       = useState(0)
   const [answers,       setAnswers]       = useState({})
@@ -42,9 +44,9 @@ export default function QuestionnairePage() {
         body: JSON.stringify({ answers }),
       })
       const data = await res.json()
-      setResult(data)
       sessionStorage.setItem('lastAssessmentResult', JSON.stringify(data))
       if (portfolioData) sessionStorage.setItem('lastPortfolioData', JSON.stringify(portfolioData))
+      navigate('/my-portfolio')
     } catch (e) {
       setError('Submission failed. Check that Flask is running.')
     }
@@ -52,19 +54,6 @@ export default function QuestionnairePage() {
   }
 
   function retake() { setResult(null); setAnswers({}); setCurrent(0) }
-
-  /* ── RESULT VIEW ─────────────────────────────────────────── */
-  if (result) {
-    return (
-      <div className="page">
-        <div className="page-header">
-          <div className="page-eyebrow">Part 2 · Results</div>
-          <h1 className="page-title">Your Investment<br/><em style={{color:'var(--gold)'}}>Dashboard</em></h1>
-        </div>
-        <ResultDashboard data={result} portfolioData={portfolioData} onRetake={retake}/>
-      </div>
-    )
-  }
 
   /* ── QUESTIONNAIRE VIEW ───────────────────────────────────── */
   return (

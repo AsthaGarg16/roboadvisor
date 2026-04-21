@@ -127,11 +127,14 @@ def compute_risk_aversion(answers: dict) -> dict:
     for q in QUESTIONS:
         score = int(answers[q["id"]])
         weight = round(1 / 5, 4)
+        answer_label = next((o["label"] for o in q["options"] if o["score"] == score), "")
         breakdown.append({
-            "question":     q["id"],
-            "weight":       weight,
-            "score":        score,
-            "contribution": round(weight * score, 4),
+            "question":      q["id"],
+            "question_text": q["text"],
+            "answer_label":  answer_label,
+            "weight":        weight,
+            "score":         score,
+            "contribution":  round(weight * score, 4),
         })
         if q["id"] in ["q1", "q2", "q3", "q4", "q5"]:
             rw.append(score)

@@ -46,12 +46,12 @@ function rrColor(rr) {
   return             { bg:'rgba(74,222,128,.08)', border:'#4ade80', text:'#4ade80', label:'Achievable',  icon:'🟢' }
 }
 
-function evalAlert(willingness, capacity) {
-  const diff = willingness - capacity
-  if (Math.abs(diff) <= 1) return { type:'green',  icon:<CheckCircle size={14}/>,  msg:'Risk Profile Aligned.', color:'#4ade80', bg:'rgba(74,222,128,.08)',  border:'#4ade80' }
-  if (diff > 1)            return { type:'amber',  icon:<AlertCircle size={14}/>,  msg:`Risk Alert: Willingness > Capability. Profile capped at Capability (A=${capacity.toFixed(1)}).`, color:'#fbbf24', bg:'rgba(234,179,8,.1)', border:'#eab308' }
-  if (diff < -2)           return { type:'blue',   icon:<Info size={14}/>,          msg:'Educational Insight: Capacity >> Comfort. Conservative bias may limit long-term growth.', color:'#38bdf8', bg:'rgba(56,189,248,.08)', border:'#38bdf8' }
-  return                          { type:'red',    icon:<XCircle size={14}/>,       msg:'Goal-Return Gap: Your goals require a more aggressive profile than your comfort allows.', color:'#f87171', bg:'rgba(248,113,113,.1)', border:'#f87171' }
+function buildAlert(message, explanation) {
+  if (message === 'Risk Alert')
+    return { icon:<AlertCircle size={14}/>, color:'#fbbf24', bg:'rgba(234,179,8,.1)',       border:'#eab308', msg:`${message}: ${explanation}` }
+  if (message === 'Educational Insight')
+    return { icon:<Info size={14}/>,        color:'#38bdf8', bg:'rgba(56,189,248,.08)',      border:'#38bdf8', msg:`${message}: ${explanation}` }
+  return   { icon:<CheckCircle size={14}/>, color:'#4ade80', bg:'rgba(74,222,128,.08)',      border:'#4ade80', msg:`${message}: ${explanation}` }
 }
 
 /* ─────────────────────────── SUB-COMPONENTS ────────────────────── */
@@ -179,6 +179,7 @@ function FundTable({ data, optimalData }) {
 }
 
 function FrontierChart({ portfolioData, riskAversion, profile, optimalData }) {
+  const [fitView, setFitView] = useState(true)
   if (!portfolioData) return null
   const { frontier_no_short, frontier_short, gmvp_no_short, gmvp_short, fund_names, returns, std_devs } = portfolioData
 
@@ -188,10 +189,23 @@ function FrontierChart({ portfolioData, riskAversion, profile, optimalData }) {
   const gmvpNS     = [{ x:+(gmvp_no_short.std*100).toFixed(2), y:+(gmvp_no_short.return*100).toFixed(2), name:'GMVP (No Short)', sharpe:gmvp_no_short.sharpe }]
   const gmvpS      = [{ x:+(gmvp_short.std*100).toFixed(2),    y:+(gmvp_short.return*100).toFixed(2),    name:'GMVP (Short)',    sharpe:gmvp_short.sharpe    }]
 
-  // User's actual optimal portfolio point
   const optimalPt = optimalData
     ? [{ x:+(optimalData.std*100).toFixed(2), y:+(optimalData.return*100).toFixed(2), name:`You — ${profile}`, sharpe:optimalData.sharpe }]
     : []
+
+  // Compute tight domain from key points (funds + GMVPs + optimal)
+  const keyPts = [...fundPoints, ...gmvpNS, ...gmvpS, ...optimalPt]
+  const allX = keyPts.map(p=>p.x)
+  const allY = keyPts.map(p=>p.y)
+  const pad  = (arr, pct=0.15) => { const mn=Math.min(...arr), mx=Math.max(...arr), d=(mx-mn)||1; return [mn-d*pct, mx+d*pct] }
+  const fitXDomain = pad(allX)
+  const fitYDomain = pad(allY)
+
+  const xDomain = fitView ? fitXDomain.map(v=>+v.toFixed(1)) : ['auto','auto']
+  const yDomain = fitView ? fitYDomain.map(v=>+v.toFixed(1)) : ['auto','auto']
+
+  // When in fit view, clip frontier lines to domain bounds so they don't distort scale
+  const clipX = (pts) => fitView ? pts.filter(p=>p.x>=xDomain[0] && p.x<=xDomain[1] && p.y>=yDomain[0] && p.y<=yDomain[1]) : pts
 
   const CustomTip = ({ active, payload }) => {
     if (!active||!payload?.length) return null
@@ -206,43 +220,54 @@ function FrontierChart({ portfolioData, riskAversion, profile, optimalData }) {
     )
   }
 
+  const btnStyle = (active) => ({
+    fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:'.8rem',
+    letterSpacing:'.06em', textTransform:'uppercase', padding:'5px 14px',
+    borderRadius:99, border:'1.5px solid', cursor:'pointer', transition:'all .2s',
+    background: active ? 'var(--gold)' : 'transparent',
+    color: active ? 'var(--btn-text-on-gold)' : 'var(--text-muted)',
+    borderColor: active ? 'var(--gold)' : 'var(--border2)',
+  })
+
   return (
-    <ResponsiveContainer width="100%" height={600}>
-      <ScatterChart margin={{top:10,right:20,bottom:20,left:10}}>
-        <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" strokeOpacity={.4}/>
-        <XAxis dataKey="x" type="number" domain={['auto','auto']} name="σ%"
-          label={{value:'Annualised σ (%)',position:'insideBottom',offset:-8,fill:'var(--text-muted)',fontSize:10}}
-          tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
-        <YAxis dataKey="y" type="number" domain={['auto','auto']} name="r%"
-          label={{value:'Return (%)',angle:-90,position:'insideLeft',offset:12,fill:'var(--text-muted)',fontSize:10}}
-          tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
-        <Tooltip content={<CustomTip/>}/>
+    <div>
+      <div style={{display:'flex',gap:8,marginBottom:12,justifyContent:'flex-end'}}>
+        <button style={btnStyle(fitView)}  onClick={()=>setFitView(true)}>Fit to data</button>
+        <button style={btnStyle(!fitView)} onClick={()=>setFitView(false)}>Full range</button>
+      </div>
+      <ResponsiveContainer width="100%" height={500}>
+        <ScatterChart margin={{top:10,right:20,bottom:20,left:10}}>
+          <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" strokeOpacity={.4}/>
+          <XAxis dataKey="x" type="number" domain={xDomain} name="σ%"
+            label={{value:'Annualised σ (%)',position:'insideBottom',offset:-8,fill:'var(--text-muted)',fontSize:10}}
+            tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
+          <YAxis dataKey="y" type="number" domain={yDomain} name="r%"
+            label={{value:'Return (%)',angle:-90,position:'insideLeft',offset:12,fill:'var(--text-muted)',fontSize:10}}
+            tick={{fill:'var(--text-muted)',fontSize:10,fontFamily:'IBM Plex Mono'}}/>
+          <Tooltip content={<CustomTip/>}/>
 
-        {/* Frontiers */}
-        <Scatter name="No Short Sales"      data={frontierNS} line={{stroke:'#38bdf8',strokeWidth:2}} fill="transparent"/>
-        <Scatter name="Short Sales Allowed" data={frontierS}  line={{stroke:'#a78bfa',strokeWidth:2,strokeDasharray:'5 3'}} fill="transparent"/>
+          <Scatter name="No Short Sales"      data={clipX(frontierNS)} line={{stroke:'#38bdf8',strokeWidth:2}} fill="transparent"/>
+          <Scatter name="Short Sales Allowed" data={clipX(frontierS)}  line={{stroke:'#a78bfa',strokeWidth:2,strokeDasharray:'5 3'}} fill="transparent"/>
 
-        {/* 10 fund dots */}
-        {fundPoints.map((fp,i)=>(
-          <Scatter key={fp.name} name={fp.name} data={[fp]} fill={fp.color} r={6} legendType="none"/>
-        ))}
+          {fundPoints.map((fp)=>(
+            <Scatter key={fp.name} name={fp.name} data={[fp]} fill={fp.color} r={6} legendType="none"/>
+          ))}
 
-        {/* GMVPs */}
-        <Scatter name="GMVP (No Short)" data={gmvpNS} fill="#38bdf8" r={9} shape="diamond"/>
-        <Scatter name="GMVP (Short)"    data={gmvpS}  fill="#a78bfa" r={9} shape="diamond"/>
+          <Scatter name="GMVP (No Short)" data={gmvpNS} fill="#38bdf8" r={9} shape="diamond"/>
+          <Scatter name="GMVP (Short)"    data={gmvpS}  fill="#a78bfa" r={9} shape="diamond"/>
 
-        {/* User's optimal portfolio — gold highlight */}
-        {optimalPt.length>0&&(
-          <Scatter name={`You — ${profile}`} data={optimalPt} fill="var(--gold)" r={13} legendType="none"
-            shape={props=>{
-              const {cx,cy}=props
-              return <g><circle cx={cx} cy={cy} r={16} fill="var(--gold)" opacity={.25}/><circle cx={cx} cy={cy} r={9} fill="var(--gold)" stroke="var(--bg)" strokeWidth={2}/></g>
-            }}/>
-        )}
+          {optimalPt.length>0&&(
+            <Scatter name={`You — ${profile}`} data={optimalPt} fill="var(--gold)" r={13} legendType="none"
+              shape={props=>{
+                const {cx,cy}=props
+                return <g><circle cx={cx} cy={cy} r={16} fill="var(--gold)" opacity={.25}/><circle cx={cx} cy={cy} r={9} fill="var(--gold)" stroke="var(--bg)" strokeWidth={2}/></g>
+              }}/>
+          )}
 
-        <Legend wrapperStyle={{fontSize:'.85rem',color:'var(--text-muted)',paddingTop:12}}/>
-      </ScatterChart>
-    </ResponsiveContainer>
+          <Legend wrapperStyle={{fontSize:'.85rem',color:'var(--text-muted)',paddingTop:12}}/>
+        </ScatterChart>
+      </ResponsiveContainer>
+    </div>
   )
 }
 
@@ -475,8 +500,10 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
   const [showGoalPlanner, setShowGoalPlanner] = useState(false)
   const [goalData, setGoalData] = useState(null)
   const [expandedSection, setExpandedSection] = useState({ A:true, B:true, C:true, E:false, D:true })
-  const [optimalPortfolio, setOptimalPortfolio] = useState(null)
-  const [fundOverview, setFundOverview]         = useState(null)
+  const [optimalPortfolio, setOptimalPortfolio]           = useState(null)
+  const [optimalPortfolioShort, setOptimalPortfolioShort] = useState(null)
+  const [shortTab, setShortTab]                           = useState('no-short')
+  const [fundOverview, setFundOverview]                   = useState(null)
 
   const profile      = data.profile
   const A            = data.risk_aversion
@@ -486,6 +513,10 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
     fetch(`${API}/api/optimal?A=${A}`)
       .then(r => r.json())
       .then(d => setOptimalPortfolio(d))
+      .catch(() => {})
+    fetch(`${API}/api/optimal?A=${A}&short=true`)
+      .then(r => r.json())
+      .then(d => setOptimalPortfolioShort(d))
       .catch(() => {})
   }, [portfolioData, A])
 
@@ -498,10 +529,7 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
   const profileRet   = PROFILE_ALLOCATIONS[profile] ? PROFILE_EXPECTED_RETURN[profile] || 0.07 : 0.07
   const alloc        = PROFILE_ALLOCATIONS[profile] || {}
 
-  // Simulate willingness vs capacity from A
-  const willingness  = A
-  const capacity     = Math.max(1, Math.min(10, A * (1 + (Math.random()*0.4 - 0.2))))  // ±20% band simulation
-  const alert        = evalAlert(willingness, capacity)
+  const alert        = buildAlert(data.assessment, data.explanation)
 
   function toggle(key) { setExpandedSection(s=>({...s,[key]:!s[key]})) }
 
@@ -541,8 +569,8 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
             <div className="grid-3">
               {[
                 { label:'Risk Aversion (A)', value:A.toFixed(2), sub:'Scale 1–10' },
-                { label:'Weighted Score',   value:data.raw_weighted_sum.toFixed(2), sub:'Pre-normalisation' },
-                { label:'Exp. Return',      value:`${(profileRet*100).toFixed(1)}%`, sub:'Profile benchmark' },
+                { label:'Avg Score',         value:((11 - A)).toFixed(2), sub:'Out of 10' },
+                { label:'Exp. Return',       value:`${(profileRet*100).toFixed(1)}%`, sub:'Profile benchmark' },
               ].map(m=>(
                 <div key={m.label} className="card" style={{textAlign:'center',padding:'20px 16px'}}>
                   <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'2.03rem',color:'var(--text)'}}>{m.value}</div>
@@ -565,26 +593,28 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
 
             {/* Answer breakdown */}
             <details className="card" style={{padding:'20px 28px'}}>
-              <summary style={{cursor:'pointer',fontSize:'.9rem',color:'var(--text-muted)',letterSpacing:'.08em',textTransform:'uppercase',userSelect:'none',fontFamily:"'IBM Plex Mono',monospace"}}>
-                ▶ Answer Breakdown
+              <summary style={{cursor:'pointer',fontSize:'.9rem',color:'var(--text-muted)',letterSpacing:'.08em',textTransform:'uppercase',userSelect:'none',fontFamily:"'IBM Plex Mono',monospace",listStyle:'none'}}>
+                <span style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  Answer Breakdown
+                  <span className="breakdown-chevron" style={{fontSize:'.8rem',transition:'transform .2s'}}>▶</span>
+                </span>
+                <style>{`
+                  details > summary::-webkit-details-marker { display: none; }
+                  details[open] .breakdown-chevron { transform: rotate(90deg); }
+                `}</style>
               </summary>
-              <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.93rem',marginTop:14}}>
-                <thead><tr style={{borderBottom:'1px solid var(--border)'}}>
-                  {['Q','Weight','Score','Contribution'].map(h=>(
-                    <th key={h} style={{textAlign:'left',padding:'6px 10px',color:'var(--text-muted)',fontSize:'.81rem',textTransform:'uppercase',letterSpacing:'.08em'}}>{h}</th>
-                  ))}
-                </tr></thead>
-                <tbody>
-                  {(data.breakdown || []).map((row,i)=>(
-                    <tr key={i} style={{borderBottom:'1px solid var(--border)'}}>
-                      <td style={{padding:'7px 10px',color:'var(--text-muted)',fontFamily:'monospace'}}>{row.question.toUpperCase()}</td>
-                      <td style={{padding:'7px 10px',fontFamily:'monospace'}}>{row.weight}×</td>
-                      <td style={{padding:'7px 10px',fontFamily:'monospace'}}>{row.score}</td>
-                      <td style={{padding:'7px 10px',fontFamily:'monospace',color:'var(--gold)'}}>{row.contribution.toFixed(3)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div style={{display:'flex',flexDirection:'column',gap:10,marginTop:14}}>
+                {(data.breakdown || []).map((row,i)=>(
+                  <div key={i} style={{borderBottom:'1px solid var(--border)',paddingBottom:10}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:8,marginBottom:4}}>
+                      <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:'.78rem',color:'var(--gold)',flexShrink:0}}>{row.question.toUpperCase()}</span>
+                      <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:'.83rem',color:'var(--text-muted)'}}>score: {row.score}</span>
+                    </div>
+                    <div style={{fontSize:'.9rem',color:'var(--text)',marginBottom:3}}>{row.question_text}</div>
+                    <div style={{fontSize:'.85rem',color:'var(--text-muted)',fontStyle:'italic'}}>→ {row.answer_label}</div>
+                  </div>
+                ))}
+              </div>
             </details>
           </div>
         )}
@@ -596,26 +626,43 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
         {expandedSection.C && (
           <div style={{display:'flex',flexDirection:'column',gap:20}}>
 
-            {/* C1 — Donut */}
+            {/* Asset class donut */}
             <div className="card">
-              <div className="card-title">C1 — Asset Class Allocation</div>
+              <div className="card-title">Asset Class Allocation</div>
               <DonutChart profile={profile}/>
             </div>
 
-            {/* C2 — Fund table */}
+            {/* Short/no-short toggle */}
+            <div style={{display:'flex',gap:8}}>
+              {[
+                { id:'no-short', label:'No Short Sales' },
+                { id:'short',    label:'Short Sales Allowed' },
+              ].map(t=>(
+                <button key={t.id} onClick={()=>setShortTab(t.id)}
+                  style={{fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:'.93rem',letterSpacing:'.06em',textTransform:'uppercase',padding:'9px 20px',borderRadius:99,border:'1.5px solid',cursor:'pointer',transition:'all .2s',
+                    background:shortTab===t.id?'var(--gold)':'transparent',
+                    color:shortTab===t.id?'var(--btn-text-on-gold)':'var(--text-muted)',
+                    borderColor:shortTab===t.id?'var(--gold)':'var(--border2)',
+                  }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Fund table */}
             <div className="card">
-              <div className="card-title">C2 — Fund Allocation (Optimal Weights, A = {A.toFixed(2)})</div>
+              <div className="card-title">Fund Allocation (Optimal Weights, A = {A.toFixed(2)})</div>
               {portfolioData
-                ? <FundTable data={portfolioData} optimalData={optimalPortfolio}/>
+                ? <FundTable data={portfolioData} optimalData={shortTab==='short'?optimalPortfolioShort:optimalPortfolio}/>
                 : <div style={{color:'var(--text-muted)',fontSize:'.98rem',padding:'16px 0'}}>Portfolio data not available. Ensure Flask is running with your Excel files in ./data/.</div>}
             </div>
 
-            {/* C3 — Frontier */}
+            {/* Frontier */}
             <div className="card">
-              <div className="card-title">C3 — Efficient Frontier</div>
+              <div className="card-title">Efficient Frontier</div>
               <div style={{fontSize:'.9rem',color:'var(--text-muted)',marginBottom:16}}>Your optimal portfolio (A = {A.toFixed(2)}) is highlighted in gold on the efficient frontier.</div>
               {portfolioData
-                ? <FrontierChart portfolioData={portfolioData} riskAversion={A} profile={profile} optimalData={optimalPortfolio}/>
+                ? <FrontierChart portfolioData={portfolioData} riskAversion={A} profile={profile} optimalData={shortTab==='short'?optimalPortfolioShort:optimalPortfolio}/>
                 : <div style={{color:'var(--text-muted)',fontSize:'.98rem',padding:'24px 0',textAlign:'center'}}>Connect Flask backend with fund data to render the frontier.</div>}
             </div>
           </div>
@@ -624,7 +671,7 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
 
       {/* ══ BAND B — GOAL SUMMARY ═══════════════════════════════════ */}
       <div style={{marginBottom:24}}>
-        {sectionHeader('Goal Summary & Required Returns','B')}
+        {sectionHeader('Goal Planner','B')}
         {expandedSection.B && (
           <div style={{display:'flex',flexDirection:'column',gap:16}}>
 
@@ -700,11 +747,7 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <div className="card" style={{textAlign:'center',padding:'36px',color:'var(--text-muted)',fontSize:'1.005rem'}}>
-                Open the Goal Planner to define your financial goals and see required returns.
-              </div>
-            )}
+            ) : null}
           </div>
         )}
       </div>
@@ -733,6 +776,8 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                       <Tooltip
                         cursor={false}
                         contentStyle={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,fontSize:'.9rem',fontFamily:"'IBM Plex Mono',monospace"}}
+                        labelStyle={{color:'var(--text)'}}
+                        itemStyle={{color:'var(--text)'}}
                         formatter={(v)=>[`${v>=0?'+':''}${v.toFixed(2)}%`,'Ann. Return']}/>
                       <ReferenceLine y={0} stroke="var(--border2)" strokeWidth={1}/>
                       <Bar dataKey="value" radius={[4,4,0,0]} maxBarSize={44}>
@@ -762,8 +807,7 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
       <div style={{marginBottom:24}}>
         {sectionHeader('Actions','D')}
         {expandedSection.D && (
-          <div style={{display:'flex',flexDirection:'column',gap:16}}>
-            <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+          <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
               <button onClick={()=>downloadPDF(data,goalData,profile)} style={primaryBtn}>
                 <Download size={14}/> Download Summary (PDF)
               </button>
@@ -771,19 +815,18 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                 <RotateCcw size={14}/> Restart Assessment
               </button>
             </div>
-
-            {/* Disclaimer */}
-            <div style={{padding:'16px 20px',background:'var(--surface2)',borderRadius:'var(--radius)',border:'1px solid var(--border)',borderLeft:'3px solid var(--text-dim)'}}>
-              <div style={{fontSize:'.85rem',fontWeight:600,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text-dim)',marginBottom:6}}>Disclaimer</div>
-              <div style={{fontSize:'.88rem',color:'var(--text-dim)',lineHeight:1.7}}>
-                This platform is an automated robo-advisory tool and does not constitute financial advice.
-                All portfolio optimisation results are based on historical price data; past performance is not indicative of future results.
-                Investment involves risk, including the possible loss of principal. Consult a licensed financial adviser before making investment decisions.
-                Short selling involves additional risks including unlimited loss potential and margin requirements.
-              </div>
-            </div>
-          </div>
         )}
+      </div>
+
+      {/* ══ DISCLAIMER — always visible ════════════════════════════ */}
+      <div style={{padding:'16px 20px',background:'var(--surface2)',borderRadius:'var(--radius)',border:'1px solid var(--border)',borderLeft:'3px solid var(--text-dim)',marginBottom:24}}>
+        <div style={{fontSize:'.85rem',fontWeight:600,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text-dim)',marginBottom:6}}>Disclaimer</div>
+        <div style={{fontSize:'.88rem',color:'var(--text-dim)',lineHeight:1.7}}>
+          This platform is an automated robo-advisory tool and does not constitute financial advice.
+          All portfolio optimisation results are based on historical price data; past performance is not indicative of future results.
+          Investment involves risk, including the possible loss of principal. Consult a licensed financial adviser before making investment decisions.
+          Short selling involves additional risks including unlimited loss potential and margin requirements.
+        </div>
       </div>
 
       {showGoalPlanner && (

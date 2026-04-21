@@ -87,7 +87,7 @@ def solve_gmvp_short(mu, cov):
             "sharpe": (r - RF_RATE) / s if s > 0 else 0}
 
 
-def build_frontier(mu, cov, allow_short=False, n=N_FRONTIER):
+def build_frontier(mu, cov, allow_short=False, n=N_FRONTIER, max_r=None):
     """
     Constructs the full Markowitz bullet with two warm-started passes:
       1. GMVP → max_return  (efficient upper arm)
@@ -98,7 +98,8 @@ def build_frontier(mu, cov, allow_short=False, n=N_FRONTIER):
     g      = solve_gmvp_short(mu, cov) if allow_short else solve_gmvp_no_short(mu, cov)
     spread = mu.max() - mu.min()
     min_r  = g["return"] - spread * 1.5 if allow_short else mu.min()
-    max_r  = mu.max() * (1.3 if allow_short else 1.0)
+    if max_r is None:
+        max_r = mu.max() * (1.3 if allow_short else 1.0)
     bounds = None if allow_short else [(0, 1)] * k
     half   = n // 2
 
@@ -177,7 +178,8 @@ def get_portfolio_data() -> dict:
         "gmvp_no_short":     solve_gmvp_no_short(mu_a, cov_a),
         "gmvp_short":        solve_gmvp_short(mu_a, cov_a),
         "frontier_no_short": build_frontier(mu_a, cov_a, allow_short=False),
-        "frontier_short":    build_frontier(mu_a, cov_a, allow_short=True),
+        "frontier_short":    build_frontier(mu_a, cov_a, allow_short=True,
+                                 max_r=solve_optimal_portfolio(mu_a, cov_a, A=1.0, allow_short=True)["return"] * 1.05),
     }
     return _cache
 
