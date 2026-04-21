@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from 'react'
 import {
   PieChart, Pie, Cell, Tooltip as RTooltip, ResponsiveContainer,
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  BarChart, Bar, ReferenceLine
+  BarChart, Bar, ReferenceLine, ComposedChart, Area, Line
 } from 'recharts'
 import {
   RotateCcw, Download, AlertTriangle, Info, TrendingUp,
-  CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, BarChart2, Grid
+  CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, BarChart2, Grid,
+  Play, Loader
 } from 'lucide-react'
 
 /* ─────────────────────────── CONSTANTS ─────────────────────────── */
@@ -501,12 +502,218 @@ function CovarianceHeatmap({ matrix, labels }) {
   )
 }
 
+/* ─────────────────────────── MONTE CARLO CHARTS ────────────────── */
+
+const MC_MONTHS      = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+const MC_MONTH_TICKS = [0, 21, 42, 63, 84, 105, 126, 147, 168, 189, 210, 231]
+const dayToMonth     = d => MC_MONTHS[Math.min(Math.floor(d / 21), 11)]
+
+// Layout constants — must match the ComposedChart margin + YAxis width exactly
+const MC_MARGIN  = { top: 10, right: 24, bottom: 32, left: 16 }
+const MC_Y_AX_W  = 56
+const MC_HEIGHT  = 420
+
+function MonteCarloFanChart({ simData }) {
+  const wrapRef = useRef(null)
+  const [cw, setCw] = useState(0)
+
+  useEffect(() => {
+    if (!wrapRef.current) return
+    const ro = new ResizeObserver(e => setCw(e[0].contentRect.width))
+    ro.observe(wrapRef.current)
+    return () => ro.disconnect()
+  }, [])
+
+  const { percentile_paths, stats, sample_paths } = simData
+  const days = percentile_paths.days
+  const init = stats.initial_value
+
+  const chartData = days.map((d, i) => ({
+    day: d,
+    base:  percentile_paths.p5[i],
+    band1: percentile_paths.p25[i] - percentile_paths.p5[i],
+    band2: percentile_paths.p50[i] - percentile_paths.p25[i],
+    band3: percentile_paths.p75[i] - percentile_paths.p50[i],
+    band4: percentile_paths.p95[i] - percentile_paths.p75[i],
+    _p5:  percentile_paths.p5[i],
+    _p25: percentile_paths.p25[i],
+    _p50: percentile_paths.p50[i],
+    _p75: percentile_paths.p75[i],
+    _p95: percentile_paths.p95[i],
+  }))
+
+  const fmt = v => `$${v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v.toFixed(0)}`
+
+  // Y domain set explicitly so SVG overlay and Recharts scale agree perfectly
+  const yMin = Math.min(...percentile_paths.p5)  * 0.96
+  const yMax = Math.max(...percentile_paths.p95) * 1.04
+
+  // Plot-area pixel coordinates derived from known margins/widths
+  const plotL = MC_MARGIN.left + MC_Y_AX_W
+  const plotT = MC_MARGIN.top
+  const plotW = Math.max(cw - MC_MARGIN.left - MC_Y_AX_W - MC_MARGIN.right, 0)
+  const plotH = Math.max(MC_HEIGHT - MC_MARGIN.top - MC_MARGIN.bottom, 0)
+  const plotB = plotT + plotH
+
+  const toX = day   => plotL + (day / 251) * plotW
+  const toY = value => plotB - ((value - yMin) / (yMax - yMin)) * plotH
+
+  // Pre-compute SVG path strings for the individual traces
+  const svgPaths = cw > 0 && sample_paths
+    ? sample_paths.map(vals =>
+        days.map((d, j) => `${j === 0 ? 'M' : 'L'}${toX(d).toFixed(1)},${toY(vals[j]).toFixed(1)}`).join(' ')
+      )
+    : []
+
+  const CustomTip = ({ active, payload }) => {
+    if (!active || !payload?.length) return null
+    const d = payload[0]?.payload
+    return (
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', fontSize: '.88rem', fontFamily: "'IBM Plex Mono',monospace", minWidth: 172 }}>
+        <div style={{ color: 'var(--text-muted)', marginBottom: 8, fontSize: '.82rem', letterSpacing: '.06em', textTransform: 'uppercase' }}>
+          {dayToMonth(d.day)} 2026
+        </div>
+        {[
+          ['95th %ile', '_p95', '#4ade80'],
+          ['75th %ile', '_p75', '#a3e635'],
+          ['Median',    '_p50', '#c9a84c'],
+          ['25th %ile', '_p25', '#fb923c'],
+          ['5th %ile',  '_p5',  '#f87171'],
+        ].map(([label, key, color]) => (
+          <div key={key} style={{ display: 'flex', justifyContent: 'space-between', gap: 20, marginBottom: 3 }}>
+            <span style={{ color }}>{label}</span>
+            <span style={{ color: 'var(--text)', fontWeight: 600 }}>{fmt(d[key])}</span>
+          </div>
+        ))}
+        <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 6, fontSize: '.8rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+          <span>Starting capital</span><span>{fmt(init)}</span>
+        </div>
+      </div>
+    )
+  }
+
+  // Custom legend — solid versions of the band colours so swatches are always visible
+  const legendItems = [
+    { color: '#f87171',              type: 'square', label: 'Downside tail  (5th – 25th %ile)' },
+    { color: '#c9a84c',              type: 'square', label: 'Interquartile range  (25th – 75th %ile)' },
+    { color: '#4ade80',              type: 'square', label: 'Upside tail  (75th – 95th %ile)' },
+    { color: '#c9a84c',              type: 'line',   label: 'Median  (50th %ile)' },
+    { color: 'rgba(99,155,210,0.8)', type: 'line',   label: 'Individual paths' },
+  ]
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative' }}>
+      {/* Individual simulation path traces — sit behind the fan bands */}
+      {svgPaths.length > 0 && (
+        <svg width={cw} height={MC_HEIGHT}
+          style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          <defs>
+            <clipPath id="mc-paths-clip">
+              <rect x={plotL} y={plotT} width={plotW} height={plotH} />
+            </clipPath>
+          </defs>
+          <g clipPath="url(#mc-paths-clip)">
+            {svgPaths.map((d, i) => (
+              <path key={i} d={d} stroke="rgba(99,155,210,0.13)" strokeWidth={0.7} fill="none" />
+            ))}
+          </g>
+        </svg>
+      )}
+
+      <ResponsiveContainer width="100%" height={MC_HEIGHT}>
+        <ComposedChart data={chartData} margin={MC_MARGIN}>
+          <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" strokeOpacity={.4} />
+          <XAxis
+            dataKey="day" type="number" domain={[0, 251]}
+            ticks={MC_MONTH_TICKS} tickFormatter={dayToMonth}
+            label={{ value: '2026', position: 'insideBottom', offset: -14, fill: 'var(--text-muted)', fontSize: 11 }}
+            tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'IBM Plex Mono' }} />
+          <YAxis
+            domain={[yMin, yMax]} tickFormatter={fmt} width={MC_Y_AX_W}
+            tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'IBM Plex Mono' }} />
+          <Tooltip content={<CustomTip />} />
+
+          <Area stackId="fan" type="monotone" dataKey="base"  fill="transparent"               stroke="none" legendType="none" />
+          <Area stackId="fan" type="monotone" dataKey="band1" fill="rgba(248,113,113,0.32)"   stroke="none" legendType="none" />
+          <Area stackId="fan" type="monotone" dataKey="band2" fill="rgba(201,168,76,0.40)"    stroke="none" legendType="none" />
+          <Area stackId="fan" type="monotone" dataKey="band3" fill="rgba(201,168,76,0.40)"    stroke="none" legendType="none" />
+          <Area stackId="fan" type="monotone" dataKey="band4" fill="rgba(74,222,128,0.32)"    stroke="none" legendType="none" />
+          <Line type="monotone" dataKey="_p50" stroke="#c9a84c" strokeWidth={2.5} dot={false} legendType="none" />
+          <ReferenceLine y={init} stroke="rgba(100,116,139,0.65)" strokeDasharray="6 3" strokeWidth={1.5} />
+        </ComposedChart>
+      </ResponsiveContainer>
+
+      {/* Custom legend — uses concrete colours, readable in both themes */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', padding: '10px 0 2px', justifyContent: 'center' }}>
+        {legendItems.map(({ color, type, label }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '.82rem', color: 'var(--text)' }}>
+            {type === 'square'
+              ? <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: 2, background: color, flexShrink: 0 }} />
+              : <svg width={20} height={10} style={{ flexShrink: 0 }}>
+                  <line x1={0} y1={5} x2={20} y2={5} stroke={color} strokeWidth={type === 'line' && label.includes('path') ? 1.5 : 2.5}
+                    strokeDasharray={label.includes('path') ? '3 2' : undefined} />
+                </svg>}
+            <span>{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function MonteCarloHistogram({ simData }) {
+  const { histogram, stats } = simData
+  const { counts, edges } = histogram
+  const fmt = v => `$${v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v.toFixed(0)}`
+
+  // Show every other label on narrow charts to avoid crowding
+  const barData = counts.map((c, i) => ({
+    center: (edges[i] + edges[i + 1]) / 2,
+    label: i % 2 === 0 ? fmt((edges[i] + edges[i + 1]) / 2) : '',
+    count: c,
+    belowInit: edges[i + 1] <= stats.initial_value,
+  }))
+
+  const CustomTip = ({ active, payload }) => {
+    if (!active || !payload?.length) return null
+    const d = payload[0]?.payload
+    return (
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', fontSize: '.88rem', fontFamily: "'IBM Plex Mono',monospace" }}>
+        <div style={{ color: 'var(--gold)', marginBottom: 4 }}>{fmt(d.center)}</div>
+        <div style={{ color: 'var(--text-muted)' }}>Simulations: <span style={{ color: 'var(--text)' }}>{d.count}</span></div>
+        <div style={{ color: 'var(--text-muted)' }}>Share: <span style={{ color: 'var(--text)' }}>{(d.count / stats.n_simulations * 100).toFixed(1)}%</span></div>
+      </div>
+    )
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={280}>
+      <BarChart data={barData} margin={{ top: 8, right: 16, bottom: 30, left: 20 }}>
+        <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" strokeOpacity={.4} vertical={false} />
+        <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 9, fontFamily: 'IBM Plex Mono' }}
+          label={{ value: 'Final Portfolio Value', position: 'insideBottom', offset: -12, fill: 'var(--text-muted)', fontSize: 11 }} />
+        <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 9, fontFamily: 'IBM Plex Mono' }} />
+        <Tooltip content={<CustomTip />} cursor={{ fill: 'rgba(100,116,139,0.12)' }} />
+        <ReferenceLine x={fmt(stats.initial_value)} stroke="rgba(100,116,139,0.7)" strokeDasharray="5 3" strokeWidth={1.5} />
+        <Bar dataKey="count" radius={[3, 3, 0, 0]} maxBarSize={28}>
+          {barData.map((d, i) => (
+            <Cell key={i} fill={d.belowInit ? '#dc2626' : '#16a34a'} fillOpacity={0.82} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
 /* ─────────────────────────── MAIN DASHBOARD ─────────────────────── */
 export default function ResultDashboard({ data, portfolioData, onRetake }) {
   const [investablePV, setInvestablePV] = useState(100000)
   const [showGoalPlanner, setShowGoalPlanner] = useState(false)
   const [goalData, setGoalData] = useState(null)
-  const [expandedSection, setExpandedSection] = useState({ A:true, B:true, C:true, E:false, D:true })
+  const [expandedSection, setExpandedSection] = useState({ A:true, B:true, C:true, MC:true, E:false, D:true })
+  const [monteCarloData, setMonteCarloData]   = useState(null)
+  const [mcLoading, setMcLoading]             = useState(false)
+  const [mcShortTab, setMcShortTab]           = useState('no-short')
   const [optimalPortfolio, setOptimalPortfolio]           = useState(null)
   const [optimalPortfolioShort, setOptimalPortfolioShort] = useState(null)
   const [shortTab, setShortTab]                           = useState('no-short')
@@ -555,6 +762,21 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
   const alert        = buildAlert(data.assessment, data.explanation)
 
   function toggle(key) { setExpandedSection(s=>({...s,[key]:!s[key]})) }
+
+  async function runSimulation() {
+    setMcLoading(true)
+    setMonteCarloData(null)
+    try {
+      const short = mcShortTab === 'short'
+      const res = await fetch(`${API}/api/monte-carlo?A=${A}&short=${short}&initial_investment=${investablePV}`)
+      const d = await res.json()
+      if (!d.error) setMonteCarloData(d)
+    } catch (e) {
+      console.error('Monte Carlo error:', e)
+    } finally {
+      setMcLoading(false)
+    }
+  }
 
   const sectionHeader = (label, key) => (
     <button onClick={()=>toggle(key)} style={{width:'100%',background:'none',border:'none',cursor:'pointer',textAlign:'left',padding:0,marginBottom:expandedSection[key]?20:0}}>
@@ -688,6 +910,104 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                 ? <FrontierChart portfolioData={portfolioData} riskAversion={A} profile={profile} optimalData={shortTab==='short'?optimalPortfolioShort:optimalPortfolio}/>
                 : <div style={{color:'var(--text-muted)',fontSize:'.98rem',padding:'24px 0',textAlign:'center'}}>Connect Flask backend with fund data to render the frontier.</div>}
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* ══ BAND MC — MONTE CARLO SIMULATION ══════════════════════ */}
+      <div style={{marginBottom:24}}>
+        {sectionHeader('Monte Carlo Simulation — 2026 Outlook','MC')}
+        {expandedSection.MC && (
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+
+            {/* Controls row */}
+            <div className="card">
+              <div className="card-title">Simulate Your Portfolio for 2026</div>
+              <div style={{fontSize:'.9rem',color:'var(--text-muted)',marginBottom:16,lineHeight:1.6}}>
+                Runs {(2000).toLocaleString()} Monte Carlo paths over 252 trading days using your optimal portfolio weights,
+                historical return expectations and covariance structure. Starting capital: <span style={{color:'var(--gold)',fontFamily:"'IBM Plex Mono',monospace"}}>${investablePV.toLocaleString()}</span>.
+              </div>
+
+              {/* Short toggle */}
+              <div style={{display:'flex',gap:8,marginBottom:16}}>
+                {[{id:'no-short',label:'No Short Sales'},{id:'short',label:'Short Sales Allowed'}].map(t=>(
+                  <button key={t.id} onClick={()=>{setMcShortTab(t.id);setMonteCarloData(null)}}
+                    style={{fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:'.88rem',letterSpacing:'.06em',textTransform:'uppercase',padding:'7px 16px',borderRadius:99,border:'1.5px solid',cursor:'pointer',transition:'all .2s',
+                      background:mcShortTab===t.id?'var(--gold)':'transparent',
+                      color:mcShortTab===t.id?'var(--btn-text-on-gold)':'var(--text-muted)',
+                      borderColor:mcShortTab===t.id?'var(--gold)':'var(--border2)',
+                    }}>{t.label}</button>
+                ))}
+              </div>
+
+              <button onClick={runSimulation} disabled={mcLoading}
+                style={{...primaryBtn, opacity:mcLoading?0.7:1, cursor:mcLoading?'wait':'pointer'}}>
+                {mcLoading
+                  ? <><Loader size={14} style={{animation:'spin 1s linear infinite'}}/> Simulating…</>
+                  : <><Play size={14}/> Run 2026 Simulation</>}
+              </button>
+            </div>
+
+            {/* Results */}
+            {monteCarloData && (() => {
+              const { stats, portfolio } = monteCarloData
+              const fmt = v => `$${v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(0)}`
+              const gain = ((stats.mean_final - stats.initial_value) / stats.initial_value * 100).toFixed(2)
+              return (
+                <>
+                  {/* Stats row */}
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12}}>
+                    {[
+                      { label:'Expected Final Value',   value: fmt(stats.mean_final),    sub: `${gain >= 0 ? '+' : ''}${gain}% gain`, color:'var(--gold)' },
+                      { label:'Median Final Value',     value: fmt(stats.median_final),  sub: 'Midpoint outcome',                      color:'var(--text)' },
+                      { label:'VaR 95% (5th %ile)',     value: fmt(stats.var_95),        sub: 'Worst 5% threshold',                    color:'#f87171' },
+                      { label:'CVaR 95%',               value: fmt(stats.cvar_95),       sub: 'Avg of worst 5%',                       color:'#fb923c' },
+                      { label:'Prob. of Profit',        value: `${stats.prob_profit}%`,  sub: 'Sims ending above initial',             color:'#4ade80' },
+                      { label:'Max Drawdown (median)',  value: `${stats.max_drawdown_median.toFixed(1)}%`, sub: 'Peak-to-trough, median path', color:'#a78bfa' },
+                    ].map(m=>(
+                      <div key={m.label} className="card" style={{textAlign:'center',padding:'16px 12px'}}>
+                        <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'1.45rem',color:m.color}}>{m.value}</div>
+                        <div style={{fontSize:'.75rem',textTransform:'uppercase',letterSpacing:'.09em',color:'var(--text-muted)',marginTop:4,lineHeight:1.3}}>{m.label}</div>
+                        <div style={{fontSize:'.78rem',color:'var(--text-dim)',marginTop:3}}>{m.sub}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Underlying portfolio stats */}
+                  <div style={{display:'flex',gap:12,flexWrap:'wrap',padding:'12px 16px',background:'var(--surface2)',borderRadius:'var(--radius)',border:'1px solid var(--border)',fontSize:'.88rem',color:'var(--text-muted)'}}>
+                    <span>Portfolio annualised return: <span style={{color:'var(--gold)',fontFamily:"'IBM Plex Mono',monospace"}}>{(portfolio.return*100).toFixed(2)}%</span></span>
+                    <span>•</span>
+                    <span>Volatility (σ): <span style={{color:'var(--gold)',fontFamily:"'IBM Plex Mono',monospace"}}>{(portfolio.std*100).toFixed(2)}%</span></span>
+                    <span>•</span>
+                    <span>Sharpe: <span style={{color:'var(--gold)',fontFamily:"'IBM Plex Mono',monospace"}}>{portfolio.sharpe.toFixed(3)}</span></span>
+                    <span>•</span>
+                    <span style={{color:'var(--text-dim)'}}>{stats.n_simulations.toLocaleString()} paths · {stats.n_days} trading days</span>
+                  </div>
+
+                  {/* Fan chart */}
+                  <div className="card">
+                    <div className="card-title">Wealth Path Percentiles — 2026</div>
+                    <div style={{fontSize:'.88rem',color:'var(--text-muted)',marginBottom:12,lineHeight:1.6}}>
+                      Fan chart showing 5th, 25th, 50th (median), 75th and 95th percentile wealth paths.
+                      Gold band = 25th–75th percentile range (interquartile). Red = downside tail, green = upside tail.
+                    </div>
+                    <MonteCarloFanChart simData={monteCarloData}/>
+                  </div>
+
+                  {/* Histogram */}
+                  <div className="card">
+                    <div className="card-title">Distribution of Final Portfolio Values</div>
+                    <div style={{fontSize:'.88rem',color:'var(--text-muted)',marginBottom:12}}>
+                      Distribution of ending wealth across all {stats.n_simulations.toLocaleString()} simulations.
+                      <span style={{color:'#f87171'}}> Red</span> = below initial capital.
+                      <span style={{color:'#4ade80'}}> Green</span> = above initial capital.
+                    </div>
+                    <MonteCarloHistogram simData={monteCarloData}/>
+                  </div>
+                </>
+              )
+            })()}
+
           </div>
         )}
       </div>
@@ -913,7 +1233,10 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
           onClose={()=>setShowGoalPlanner(false)}
           onConfirm={gd=>{ setGoalData(gd); setShowGoalPlanner(false) }}/>
       )}
-      <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <style>{`
+        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+      `}</style>
     </div>
   )
 }
