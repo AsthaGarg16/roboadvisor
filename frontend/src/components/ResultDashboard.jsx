@@ -39,11 +39,17 @@ const PROFILE_EXPECTED_RETURN = {
 
 
 /* ─────────────────────────── HELPERS ───────────────────────────── */
-function rrColor(rr) {
-  if (rr > 20) return { bg:'rgba(239,68,68,.12)', border:'#ef4444', text:'#f87171', label:'Unrealistic', icon:'⚠', urgent:true }
+function rrColor(rr, optimalPct = null) {
+  if (optimalPct !== null) {
+    if (rr <= optimalPct)        return { bg:'rgba(74,222,128,.08)', border:'#4ade80', text:'#4ade80', label:'Achievable',               icon:'🟢' }
+    if (rr <= optimalPct * 1.2)  return { bg:'rgba(234,179,8,.1)',   border:'#eab308', text:'#fbbf24', label:'Challenging',              icon:'🟡' }
+    if (rr <= optimalPct * 1.5)  return { bg:'rgba(239,68,68,.08)',  border:'#f87171', text:'#f87171', label:'High — Review Assumptions', icon:'🔴' }
+    return                              { bg:'rgba(239,68,68,.12)',  border:'#ef4444', text:'#f87171', label:'Unrealistic',               icon:'⚠', urgent:true }
+  }
+  if (rr > 20) return { bg:'rgba(239,68,68,.12)', border:'#ef4444', text:'#f87171', label:'Unrealistic',               icon:'⚠', urgent:true }
   if (rr > 10) return { bg:'rgba(239,68,68,.08)', border:'#f87171', text:'#f87171', label:'High — Review Assumptions', icon:'🔴' }
-  if (rr > 6)  return { bg:'rgba(234,179,8,.1)',  border:'#eab308', text:'#fbbf24', label:'Challenging', icon:'🟡' }
-  return             { bg:'rgba(74,222,128,.08)', border:'#4ade80', text:'#4ade80', label:'Achievable',  icon:'🟢' }
+  if (rr > 6)  return { bg:'rgba(234,179,8,.1)',  border:'#eab308', text:'#fbbf24', label:'Challenging',               icon:'🟡' }
+  return              { bg:'rgba(74,222,128,.08)', border:'#4ade80', text:'#4ade80', label:'Achievable',                icon:'🟢' }
 }
 
 function buildAlert(message, explanation) {
@@ -181,10 +187,11 @@ function FundTable({ data, optimalData }) {
 function FrontierChart({ portfolioData, riskAversion, profile, optimalData }) {
   const [fitView, setFitView] = useState(true)
   if (!portfolioData) return null
-  const { frontier_no_short, frontier_short, gmvp_no_short, gmvp_short, fund_names, returns, std_devs } = portfolioData
+  const { frontier_no_short, frontier_short_myportfolio, frontier_short, gmvp_no_short, gmvp_short, fund_names, returns, std_devs } = portfolioData
+  const _frontierS = frontier_short_myportfolio || frontier_short
 
   const frontierNS = frontier_no_short.std.map((s,i)=>({ x:+(s*100).toFixed(2), y:+(frontier_no_short.ret[i]*100).toFixed(2) }))
-  const frontierS  = frontier_short.std.map((s,i)=>({ x:+(s*100).toFixed(2),    y:+(frontier_short.ret[i]*100).toFixed(2)    }))
+  const frontierS  = _frontierS.std.map((s,i)=>({ x:+(s*100).toFixed(2), y:+(_frontierS.ret[i]*100).toFixed(2) }))
   const fundPoints = fund_names.map((name,i)=>({ x:+(std_devs[i]*100).toFixed(2), y:+(returns[i]*100).toFixed(2), name, color:FUND_COLORS[i%FUND_COLORS.length] }))
   const gmvpNS     = [{ x:+(gmvp_no_short.std*100).toFixed(2), y:+(gmvp_no_short.return*100).toFixed(2), name:'GMVP (No Short)', sharpe:gmvp_no_short.sharpe }]
   const gmvpS      = [{ x:+(gmvp_short.std*100).toFixed(2),    y:+(gmvp_short.return*100).toFixed(2),    name:'GMVP (Short)',    sharpe:gmvp_short.sharpe    }]
@@ -316,8 +323,8 @@ function GoalPlanner({ investablePV, profileReturn, onClose, onConfirm }) {
               style={{background:'transparent',border:'none',color:'var(--gold)',fontFamily:"'IBM Plex Mono',monospace",fontSize:'1.23rem',width:'100%',outline:'none'}}/>
           </div>
           <div style={{textAlign:'right'}}>
-            <div style={{fontSize:'.85rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}}>Profile Exp. Return</div>
-            <div style={{fontFamily:"'IBM Plex Mono',monospace",color:'#4ade80'}}>{(profileReturn*100).toFixed(1)}% p.a.</div>
+            <div style={{fontSize:'.85rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}}>Optimal Portfolio Return</div>
+            <div style={{fontFamily:"'IBM Plex Mono',monospace",color:'#4ade80'}}>{profileReturn !== null ? `${(profileReturn*100).toFixed(2)}% p.a.` : '—'}</div>
           </div>
         </div>
 
@@ -332,7 +339,7 @@ function GoalPlanner({ investablePV, profileReturn, onClose, onConfirm }) {
           </thead>
           <tbody>
             {goalsWithRR.map(g=>{
-              const rrc = g.rr !== null ? rrColor(g.rr) : null
+              const rrc = g.rr !== null ? rrColor(g.rr, profileReturn!==null?profileReturn*100:null) : null
               return (
                 <tr key={g.id} style={{borderBottom:'1px solid var(--border)'}}>
                   <td style={{padding:'8px 10px'}}><input value={g.name} onChange={e=>updateGoal(g.id,'name',e.target.value)} style={inputStyle}/></td>
@@ -362,13 +369,13 @@ function GoalPlanner({ investablePV, profileReturn, onClose, onConfirm }) {
         <button onClick={addGoal} style={{...ghostBtn,marginBottom:24,fontSize:'.9rem'}}>+ Add Goal</button>
 
         {/* WRR summary */}
-        <div style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:'16px 20px',marginBottom:20}}>
+        <div style={{background:'var(--surface2)',border:`1px solid ${rrColor(wrr, profileReturn!==null?profileReturn*100:null).border}`,borderRadius:'var(--radius)',padding:'16px 20px',marginBottom:20}}>
           <div style={{fontSize:'.85rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:8}}>Weighted Required Return (WRR)</div>
           <div style={{display:'flex',alignItems:'baseline',gap:12}}>
-            <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'2.33rem',color:rrColor(wrr).text}}>{wrr.toFixed(2)}%</div>
+            <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'2.33rem',color:rrColor(wrr,profileReturn!==null?profileReturn*100:null).text}}>{wrr.toFixed(2)}%</div>
             <div>
-              <span style={{fontSize:'.95rem',fontWeight:600,color:rrColor(wrr).text}}>{rrColor(wrr).icon} {rrColor(wrr).label}</span>
-              {wrr>10&&<div style={{fontSize:'.88rem',color:'var(--text-muted)',marginTop:2}}>Profile expected return: {(profileReturn*100).toFixed(1)}%. Gap: {(wrr-profileReturn*100).toFixed(1)}pp</div>}
+              <span style={{fontSize:'.95rem',fontWeight:600,color:rrColor(wrr,profileReturn!==null?profileReturn*100:null).text}}>{rrColor(wrr,profileReturn!==null?profileReturn*100:null).icon} {rrColor(wrr,profileReturn!==null?profileReturn*100:null).label}</span>
+              {profileReturn!==null&&wrr>profileReturn*100&&<div style={{fontSize:'.88rem',color:'var(--text-muted)',marginTop:2}}>Optimal portfolio return: {(profileReturn*100).toFixed(2)}%. Gap: {(wrr-profileReturn*100).toFixed(1)}pp</div>}
             </div>
           </div>
         </div>
@@ -503,6 +510,9 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
   const [optimalPortfolio, setOptimalPortfolio]           = useState(null)
   const [optimalPortfolioShort, setOptimalPortfolioShort] = useState(null)
   const [shortTab, setShortTab]                           = useState('no-short')
+  const [goalPortfolio, setGoalPortfolio]                 = useState(null)
+  const [goalPortfolioShort, setGoalPortfolioShort]       = useState(null)
+  const [goalShortTab, setGoalShortTab]                   = useState('no-short')
   const [fundOverview, setFundOverview]                   = useState(null)
 
   const profile      = data.profile
@@ -521,12 +531,25 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
   }, [portfolioData, A])
 
   useEffect(() => {
+    if (!goalData || !portfolioData) return
+    const t = (goalData.wrr / 100).toFixed(6)
+    fetch(`${API}/api/optimal_for_return?target_return=${t}`)
+      .then(r => r.json())
+      .then(d => setGoalPortfolio(d))
+      .catch(() => {})
+    fetch(`${API}/api/optimal_for_return?target_return=${t}&short=true`)
+      .then(r => r.json())
+      .then(d => setGoalPortfolioShort(d))
+      .catch(() => {})
+  }, [goalData, portfolioData])
+
+  useEffect(() => {
     fetch(`${API}/api/fund-overview`)
       .then(r => r.json())
       .then(d => setFundOverview(d))
       .catch(() => {})
   }, [])
-  const profileRet   = PROFILE_ALLOCATIONS[profile] ? PROFILE_EXPECTED_RETURN[profile] || 0.07 : 0.07
+  const profileRet   = optimalPortfolio?.return ?? null
   const alloc        = PROFILE_ALLOCATIONS[profile] || {}
 
   const alert        = buildAlert(data.assessment, data.explanation)
@@ -570,7 +593,7 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
               {[
                 { label:'Risk Aversion (A)', value:A.toFixed(2), sub:'Scale 1–10' },
                 { label:'Avg Score',         value:((11 - A)).toFixed(2), sub:'Out of 10' },
-                { label:'Exp. Return',       value:`${(profileRet*100).toFixed(1)}%`, sub:'Profile benchmark' },
+                { label:'Exp. Return',       value: profileRet !== null ? `${(profileRet*100).toFixed(2)}%` : '—', sub:'Optimal portfolio (data-driven)' },
               ].map(m=>(
                 <div key={m.label} className="card" style={{textAlign:'center',padding:'20px 16px'}}>
                   <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'2.03rem',color:'var(--text)'}}>{m.value}</div>
@@ -695,21 +718,23 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                 <div className="card-title">Goal Summary</div>
 
                 {/* WRR strip */}
-                <div style={{display:'flex',alignItems:'center',gap:16,padding:'14px 18px',marginBottom:20,borderRadius:'var(--radius)',background:rrColor(goalData.wrr).bg,border:`1px solid ${rrColor(goalData.wrr).border}`}}>
+                {(()=>{ const wc = rrColor(goalData.wrr, profileRet!==null?profileRet*100:null); return (
+                <div style={{display:'flex',alignItems:'center',gap:16,padding:'14px 18px',marginBottom:20,borderRadius:'var(--radius)',background:wc.bg,border:`1px solid ${wc.border}`}}>
                   <div>
                     <div style={{fontSize:'.83rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:4}}>Weighted Required Return (WRR)</div>
                     <div style={{display:'flex',alignItems:'baseline',gap:10}}>
-                      <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'2.13rem',color:rrColor(goalData.wrr).text}}>{goalData.wrr.toFixed(2)}%</div>
-                      <div style={{fontSize:'.95rem',fontWeight:600,color:rrColor(goalData.wrr).text,display:'flex',alignItems:'center',gap:4}}>
-                        {rrColor(goalData.wrr).urgent&&<AlertTriangle size={14}/>} {rrColor(goalData.wrr).label}
+                      <div style={{fontFamily:"'Lora',serif",fontStyle:'italic',fontSize:'2.13rem',color:wc.text}}>{goalData.wrr.toFixed(2)}%</div>
+                      <div style={{fontSize:'.95rem',fontWeight:600,color:wc.text,display:'flex',alignItems:'center',gap:4}}>
+                        {wc.urgent&&<AlertTriangle size={14}/>} {wc.label}
                       </div>
                     </div>
                   </div>
                   <div style={{marginLeft:'auto',textAlign:'right'}}>
-                    <div style={{fontSize:'.83rem',color:'var(--text-muted)',marginBottom:4}}>Profile Exp. Return</div>
-                    <div style={{fontFamily:"'IBM Plex Mono',monospace",color:'var(--green)',fontSize:'.9rem'}}>{(profileRet*100).toFixed(1)}%</div>
+                    <div style={{fontSize:'.83rem',color:'var(--text-muted)',marginBottom:4}}>Optimal Portfolio Return</div>
+                    <div style={{fontFamily:"'IBM Plex Mono',monospace",color:'var(--green)',fontSize:'.9rem'}}>{profileRet !== null ? `${(profileRet*100).toFixed(2)}%` : '—'}</div>
                   </div>
                 </div>
+                )})()}
 
                 <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.93rem'}}>
                   <thead><tr style={{borderBottom:'1px solid var(--border)'}}>
@@ -719,7 +744,7 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                   </tr></thead>
                   <tbody>
                     {goalData.goals.map((g,i)=>{
-                      const rrc = g.planned && g.rr!==null ? rrColor(g.rr) : null
+                      const rrc = g.planned && g.rr!==null ? rrColor(g.rr, profileRet!==null?profileRet*100:null) : null
                       const fvWeight = g.planned && goalData.goals.filter(x=>x.planned).reduce((s,x)=>s+x.fv,0)
                       const wt = g.planned && fvWeight > 0 ? (g.fv/fvWeight*100).toFixed(1)+'%' : '—'
                       return (
@@ -748,6 +773,58 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
                 </table>
               </div>
             ) : null}
+
+            {/* Goal-Based Portfolio */}
+            {goalData && portfolioData && (
+              <div className="card">
+                <div className="card-title">Goal-Based Portfolio (Target: {goalData.wrr.toFixed(2)}% p.a.)</div>
+
+                {(goalShortTab==='short' ? goalPortfolioShort : goalPortfolio)?.clamped && (
+                  <div style={{fontSize:'.88rem',color:'var(--gold)',marginBottom:12,padding:'8px 12px',background:'rgba(201,168,76,.1)',borderRadius:'var(--radius)',border:'1px solid rgba(201,168,76,.3)'}}>
+                    Target return adjusted to achievable frontier range.
+                    {((goalShortTab==='short' ? goalPortfolioShort : goalPortfolio)?.return) !== undefined && ` Actual: ${((goalShortTab==='short' ? goalPortfolioShort : goalPortfolio).return*100).toFixed(2)}%`}
+                  </div>
+                )}
+
+                {/* Metrics row */}
+                {(()=>{ const gp = goalShortTab==='short' ? goalPortfolioShort : goalPortfolio; return (
+                <div style={{display:'flex',gap:16,marginBottom:16,flexWrap:'wrap'}}>
+                  {[
+                    { label:'Expected Return', value: gp ? `${(gp.return*100).toFixed(2)}%` : '—' },
+                    { label:'Volatility (σ)',  value: gp ? `${(gp.std*100).toFixed(2)}%`    : '—' },
+                    { label:'Sharpe Ratio',    value: gp ? gp.sharpe.toFixed(3)              : '—' },
+                  ].map(m => (
+                    <div key={m.label} style={{flex:1,minWidth:120,padding:'12px 16px',background:'var(--surface2)',borderRadius:'var(--radius)',border:'1px solid var(--border)',textAlign:'center'}}>
+                      <div style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:'1.15rem',color:'var(--gold)'}}>{m.value}</div>
+                      <div style={{fontSize:'.78rem',textTransform:'uppercase',letterSpacing:'.08em',color:'var(--text-muted)',marginTop:4}}>{m.label}</div>
+                    </div>
+                  ))}
+                </div>
+                )})()}
+
+                {/* Short toggle */}
+                <div style={{display:'flex',gap:8,marginBottom:16}}>
+                  {[{id:'no-short',label:'No Short Sales'},{id:'short',label:'Short Sales Allowed'}].map(t=>(
+                    <button key={t.id} onClick={()=>setGoalShortTab(t.id)}
+                      style={{fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:'.88rem',letterSpacing:'.06em',textTransform:'uppercase',padding:'7px 16px',borderRadius:99,border:'1.5px solid',cursor:'pointer',transition:'all .2s',
+                        background:goalShortTab===t.id?'var(--gold)':'transparent',
+                        color:goalShortTab===t.id?'var(--btn-text-on-gold)':'var(--text-muted)',
+                        borderColor:goalShortTab===t.id?'var(--gold)':'var(--border2)',
+                      }}>{t.label}</button>
+                  ))}
+                </div>
+
+                <FundTable data={portfolioData} optimalData={goalShortTab==='short'?goalPortfolioShort:goalPortfolio}/>
+
+                <div style={{marginTop:16}}>
+                  <div className="card-title" style={{marginBottom:8}}>Efficient Frontier</div>
+                  <div style={{fontSize:'.88rem',color:'var(--text-muted)',marginBottom:12}}>
+                    Gold dot shows the goal-based portfolio targeting {goalData.wrr.toFixed(2)}% p.a.
+                  </div>
+                  <FrontierChart portfolioData={portfolioData} riskAversion={A} profile={profile} optimalData={goalShortTab==='short'?goalPortfolioShort:goalPortfolio}/>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
