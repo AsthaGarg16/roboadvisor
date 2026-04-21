@@ -672,6 +672,22 @@ export default function ResultDashboard({ data, portfolioData, onRetake }) {
               ))}
             </div>
 
+            {/* Portfolio metrics */}
+            {(()=>{ const op = shortTab==='short' ? optimalPortfolioShort : optimalPortfolio; return op ? (
+              <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
+                {[
+                  { label:'Expected Return', value:`${(op.return*100).toFixed(2)}%` },
+                  { label:'Volatility (σ)',  value:`${(op.std*100).toFixed(2)}%` },
+                  { label:'Sharpe Ratio',    value: op.sharpe.toFixed(3) },
+                ].map(m=>(
+                  <div key={m.label} style={{flex:1,minWidth:120,padding:'12px 16px',background:'var(--surface2)',borderRadius:'var(--radius)',border:'1px solid var(--border)',textAlign:'center'}}>
+                    <div style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:'1.15rem',color:'var(--gold)'}}>{m.value}</div>
+                    <div style={{fontSize:'.78rem',textTransform:'uppercase',letterSpacing:'.08em',color:'var(--text-muted)',marginTop:4}}>{m.label}</div>
+                  </div>
+                ))}
+              </div>
+            ) : null; })()}
+
             {/* Fund table */}
             <div className="card">
               <div className="card-title">Fund Allocation (Optimal Weights, A = {A.toFixed(2)})</div>
