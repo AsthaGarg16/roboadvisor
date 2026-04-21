@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Component } from 'react'
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
 import { BarChart2, ClipboardList, Home, TrendingUp, Sun, Moon, Briefcase } from 'lucide-react'
 import HomePage from './pages/HomePage'
@@ -7,6 +7,27 @@ import PortfolioPage from './pages/PortfolioPage'
 import FundOverviewPage from './pages/FundOverviewPage'
 import MyPortfolioPage from './pages/MyPortfolioPage'
 import './App.css'
+
+class PageErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(error) { return { error } }
+  render() {
+    if (this.state.error) return (
+      <div className="page">
+        <div className="card" style={{textAlign:'center',padding:'56px 36px'}}>
+          <div style={{fontSize:'2.5rem',marginBottom:16}}>⚠</div>
+          <div style={{fontFamily:"'Lora',serif",fontSize:'1.3rem',color:'var(--text)',marginBottom:10}}>Something went wrong</div>
+          <div style={{color:'var(--text-muted)',fontSize:'.93rem',marginBottom:24}}>{this.state.error.message}</div>
+          <button onClick={()=>this.setState({error:null})}
+            style={{padding:'10px 24px',borderRadius:99,background:'var(--gold)',color:'var(--btn-text-on-gold)',border:'none',cursor:'pointer',fontWeight:600}}>
+            Try again
+          </button>
+        </div>
+      </div>
+    )
+    return this.props.children
+  }
+}
 
 function useTheme() {
   const [theme, setTheme] = useState(
@@ -99,13 +120,15 @@ export default function App() {
       <div className="layout">
         <Nav theme={theme} toggle={toggle}/>
         <main className="main-content">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/questionnaire" element={<QuestionnairePage />} />
-            <Route path="/my-portfolio" element={<MyPortfolioPage />} />
-            <Route path="/portfolio" element={<PortfolioPage />} />
-            <Route path="/funds" element={<FundOverviewPage />} />
-          </Routes>
+          <PageErrorBoundary>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/questionnaire" element={<QuestionnairePage />} />
+              <Route path="/my-portfolio" element={<MyPortfolioPage />} />
+              <Route path="/portfolio" element={<PortfolioPage />} />
+              <Route path="/funds" element={<FundOverviewPage />} />
+            </Routes>
+          </PageErrorBoundary>
         </main>
         <MobileNav theme={theme} toggle={toggle}/>
       </div>

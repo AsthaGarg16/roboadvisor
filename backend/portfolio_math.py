@@ -155,6 +155,51 @@ def solve_optimal_portfolio(mu, cov, A, allow_short=False):
     }
 
 
+def solve_portfolio_for_return(mu, cov, target_return, allow_short=False):
+    """Find the minimum-variance portfolio on the efficient frontier for a given target return.
+
+    No-short: target is clamped to [gmvp_return, max(mu)] — hard constraint.
+    Short allowed: only clamps below gmvp_return; above max(mu) is achievable via
+    leverage (long high-return / short low-return), so we attempt the exact target.
+    """
+    n = len(mu)
+    gmvp = solve_gmvp_no_short(mu, cov) if not allow_short else solve_gmvp_short(mu, cov)
+    min_r = gmvp["return"]
+
+    clamped = False
+    t = target_return
+    if t < min_r:
+        t = min_r
+        clamped = True
+    elif not allow_short and t > float(np.max(mu)):
+        t = float(np.max(mu))
+        clamped = True
+
+    if abs(t - min_r) < 1e-6:
+        return {**gmvp, "target_return": target_return, "clamped": clamped}
+
+    bounds = None if allow_short else [(0, 1)] * n
+    constraints = [
+        {"type": "eq", "fun": lambda w: float(np.sum(w)) - 1},
+        {"type": "eq", "fun": lambda w, t=t: float(w @ mu) - t},
+    ]
+    res = minimize(
+        lambda w: float(w @ cov @ w),
+        np.ones(n) / n, method="SLSQP",
+        bounds=bounds, constraints=constraints,
+        options={"ftol": 1e-12, "maxiter": 1000},
+    )
+    r, s = port_perf(res.x, mu, cov)
+    return {
+        "weights": res.x.tolist(),
+        "return": r,
+        "std": s,
+        "sharpe": (r - RF_RATE) / s if s > 0 else 0,
+        "target_return": target_return,
+        "clamped": clamped,
+    }
+
+
 # ─── CACHE + AGGREGATED GETTER ────────────────────────────────────────────────
 _cache      = None   # full portfolio response (frontier, GMVP, stats)
 _math_cache = None   # (mu_array, cov_array) for /api/optimal
@@ -177,9 +222,10 @@ def get_portfolio_data() -> dict:
         "correlation":       corr.values.tolist(),
         "gmvp_no_short":     solve_gmvp_no_short(mu_a, cov_a),
         "gmvp_short":        solve_gmvp_short(mu_a, cov_a),
-        "frontier_no_short": build_frontier(mu_a, cov_a, allow_short=False),
-        "frontier_short":    build_frontier(mu_a, cov_a, allow_short=True,
-                                 max_r=solve_optimal_portfolio(mu_a, cov_a, A=1.0, allow_short=True)["return"] * 1.05),
+        "frontier_no_short":          build_frontier(mu_a, cov_a, allow_short=False),
+        "frontier_short":             build_frontier(mu_a, cov_a, allow_short=True),
+        "frontier_short_myportfolio": build_frontier(mu_a, cov_a, allow_short=True,
+                                          max_r=solve_optimal_portfolio(mu_a, cov_a, A=1.0, allow_short=True)["return"] * 1.05),
     }
     return _cache
 

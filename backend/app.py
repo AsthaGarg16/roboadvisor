@@ -29,6 +29,7 @@ from portfolio_math import (
     get_math_cache,
     get_fund_overview,
     solve_optimal_portfolio,
+    solve_portfolio_for_return,
 )
 
 app = Flask(__name__, static_folder="frontend/dist", static_url_path="/")
@@ -39,7 +40,7 @@ QUESTIONS = [
     {"id":"q1","weight":1.0,"text":"What is your primary investment goal?",
      "options":[
        {"label":"Preservation:  I prioritize capital safety and aim to minimize loss, accepting that returns may only keep pace with inflation.","score":1},
-       {"label":"Income: Income: I seek stable cash flow from investments while maintaining a conservative level of risk.","score":3},
+       {"label":"Income: I seek stable cash flow from investments while maintaining a conservative level of risk.","score":3},
        {"label":"Growth: I aim for long-term capital appreciation and accept moderate fluctuations for higher returns.","score":7},
        {"label":"Aggressive Growth: I target maximum returns and accept high volatility and potential short-term losses.","score":10},
      ]},
@@ -234,6 +235,20 @@ def api_optimal():
         A_val       = max(1.0, min(10.0, A_val))
         mu_a, cov_a = get_math_cache()
         return jsonify(solve_optimal_portfolio(mu_a, cov_a, A_val, allow_short=allow_short))
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/optimal_for_return")
+def api_optimal_for_return():
+    try:
+        target      = float(request.args.get("target_return", 0.07))
+        allow_short = request.args.get("short", "false").lower() == "true"
+        mu_a, cov_a = get_math_cache()
+        return jsonify(solve_portfolio_for_return(mu_a, cov_a, target, allow_short=allow_short))
     except FileNotFoundError as e:
         return jsonify({"error": str(e)}), 404
     except Exception as e:

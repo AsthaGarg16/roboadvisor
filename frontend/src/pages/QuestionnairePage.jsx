@@ -15,6 +15,13 @@ export default function QuestionnairePage() {
   const [portfolioData, setPortfolioData] = useState(null)
   const [error,         setError]         = useState('')
 
+  const q        = questions[current]
+  const total    = questions.length
+  const pct      = total ? Math.round((current / total) * 100) : 0
+  const selected = q ? answers[q.id] : undefined
+
+  function pick(idx) { if (q) setAnswers(prev => ({ ...prev, [q.id]: idx })) }
+
   useEffect(() => {
     fetch(`${API}/api/questions`)
       .then(r => r.json())
@@ -28,12 +35,23 @@ export default function QuestionnairePage() {
       .catch(() => { /* silently fail — dashboard handles missing data */ })
   }, [])
 
-  const q        = questions[current]
-  const total    = questions.length
-  const pct      = total ? Math.round((current / total) * 100) : 0
-  const selected = q ? answers[q.id] : undefined
-
-  function pick(idx) { if (q) setAnswers(prev => ({ ...prev, [q.id]: idx })) }
+  useEffect(() => {
+    function onKey(e) {
+      if (!q) return
+      const num = parseInt(e.key)
+      if (num >= 1 && num <= q.options.length) {
+        pick(num - 1)
+      } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
+        if (selected === undefined) return
+        if (current < total - 1) setCurrent(c => c + 1)
+        else if (e.key === 'Enter') submit()
+      } else if (e.key === 'ArrowLeft') {
+        if (current > 0) setCurrent(c => c - 1)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [q, selected, current, total, answers, portfolioData])
 
   async function submit() {
     setLoading(true)
