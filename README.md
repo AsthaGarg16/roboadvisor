@@ -1,6 +1,28 @@
-# RoboAdvisor
+# RoboAdvisor — BMD5302 Group Project
 
-A web-based robo-advisor that builds a personalised investment portfolio for any investor. The user answers a short questionnaire, receives a risk profile, sets savings goals, and is shown an optimised portfolio drawn from a universe of funds — complete with an efficient frontier, allocation breakdown, covariance/correlation heatmaps, and a downloadable PDF report.
+A full-stack robo-advisor that takes an investor through a risk questionnaire, builds a personalised mean-variance optimal portfolio, and visualises the efficient frontier, covariance structure, and fund analytics — all in a browser.
+
+> **BMD5302 Financial Modeling · AY 2025/26 Semester 2**
+
+---
+
+## Assessment Coverage
+
+| Part | Marks | What was built |
+|------|-------|----------------|
+| **Part 1 — Efficient Frontier** | 30 | 10-fund universe selected via correlation analysis (`analysis/`); annualised μ and Σ; frontier traced with and without short sales; GMVP identified |
+| **Part 2 — Risk Aversion & Optimal Portfolio** | 30 | 10-question psychometric questionnaire → risk aversion *A*; SLSQP utility maximisation `U = w′μ − (A/2)·w′Σw` |
+| **Part 3 — Platform** | 20 | React + Flask web app with five pages, interactive charts, goal planner, and PDF export |
+| **Part 4 — Video** | 20 | 15-minute walkthrough and live demo |
+
+### Rubric alignment
+
+| Rubric category | How this project addresses it |
+|-----------------|-------------------------------|
+| **Financial Modeling** | Covariance matrix computed from 3 years of daily log-returns; frontier plotted with 120 sampled points; GMVP and optimal portfolio annotated |
+| **Risk Assessment** | Two-block questionnaire (Risk Willingness Q1–Q5 / Risk Capacity Q6–Q10); binding-constraint scoring; advisory alert when blocks diverge by ≥ 2 |
+| **Platform Design** | Single-page React app with sidebar navigation, dark/light theme, session-persistent portfolio, and downloadable PDF report |
+| **Presentation** | Live interactive demo; all charts, formulas, and fund-selection rationale documented below |
 
 ---
 
@@ -16,11 +38,11 @@ A web-based robo-advisor that builds a personalised investment portfolio for any
 
 ### 1 — Install dependencies
 
-Run the setup script from the repo root. It creates a Python virtual environment under `backend/venv/` and installs all frontend packages.
-
 ```bash
 python setup.py
 ```
+
+Creates `backend/venv/` and installs all Python and Node packages.
 
 ### 2 — Get fund data
 
@@ -46,29 +68,51 @@ Flask API available at **http://localhost:5001**.
 ### 4 — Start the frontend
 
 ```bash
-cd frontend
-npm run dev
+cd frontend && npm run dev
 ```
 
 Open **http://localhost:5173** in your browser.
 
 ---
 
-## What the App Does
+## Part 1 — Efficient Frontier
 
-The sidebar has five sections:
+### Fund selection (25 → 10)
 
-| Tab | Description |
-|-----|-------------|
-| **Overview** | Landing page explaining how the tool works |
-| **Risk Profile** | 10-question questionnaire → risk aversion score + profile |
-| **My Portfolio** | Your most recent portfolio recommendation, cached across navigation (clears on refresh) |
-| **Frontier & Analytics** | Live efficient frontier, GMVP, correlation heatmap, fund scatter |
-| **Fund Overview** | Per-fund deep-dive: cumulative return, rolling volatility, Sharpe ratio, covariance matrix |
+Starting from a 25-ETF universe spanning US sectors, international equities, fixed income, and alternatives, the script in `analysis/funds_analysis.py` iteratively removes the fund with the highest average pairwise correlation until 10 diversified funds remain. Three charts document the selection:
+
+| Chart | File |
+|-------|------|
+| Correlation heatmap — all 25 candidates | `analysis/1_initial_correlation_research.png` |
+| Correlation heatmap — final 10 | `analysis/2_final_diversified_correlation.png` |
+| Annualised risk-return scatter | `analysis/3_risk_return_landscape.png` |
+
+See [`analysis/README.md`](analysis/README.md) for full details.
+
+### Statistical analysis
+
+Daily closing prices are loaded from `backend/data/`. Log-returns are computed and annualised (×252 trading days) to produce:
+
+- **μ** — vector of expected annual returns
+- **Σ** — variance-covariance matrix
+
+### Efficient frontier
+
+120 points traced by solving, for each target return *t*:
+
+```
+min   w′Σw
+ w
+s.t.  w′μ = t,   Σwᵢ = 1,   wᵢ ≥ 0   (long-only)
+```
+
+A short-selling toggle removes the non-negativity constraint. The **GMVP** anchors the left end of both curves.
 
 ---
 
-## How the Questionnaire Works
+## Part 2 — Risk Aversion & Optimal Portfolio
+
+### Questionnaire design
 
 Ten questions split into two blocks:
 
@@ -77,13 +121,15 @@ Ten questions split into two blocks:
 | **Risk Willingness** | Q1–Q5 | Investment goal, portfolio preference, reaction to drawdowns, fear of loss vs. inflation, max tolerable loss |
 | **Risk Capacity** | Q6–Q10 | Investment horizon, income stability, liquidity reserves, debt/dependents, goal-timing flexibility |
 
-Each answer scores 1–10 (1 = most conservative, 10 = most aggressive). Block averages are computed:
+Each answer scores 1–10 (1 = most conservative, 10 = most aggressive).
+
+### Scoring
 
 ```
 RW = mean(Q1–Q5)
 RC = mean(Q6–Q10)
 final_score = min(RW, RC)      ← binding constraint
-A = 11 − final_score           ← risk aversion, A ∈ [1, 10]
+A = 11 − final_score           ← risk aversion A ∈ [1, 10]
 ```
 
 The gap between blocks generates an advisory message:
@@ -94,49 +140,30 @@ The gap between blocks generates an advisory message:
 | ≤ −2.0 | Educational Insight — capacity exceeds willingness |
 | Otherwise | Risk Profile Aligned |
 
-Risk profiles by A:
+Risk profiles by *A*:
 
-| A range | Profile |
-|---------|---------|
+| A | Profile |
+|---|---------|
 | ≤ 2 | Aggressive |
 | ≤ 4 | Moderately Aggressive |
 | ≤ 6 | Balanced |
 | ≤ 8 | Moderately Conservative |
 | ≤ 10 | Conservative |
 
----
+### Optimal portfolio
 
-## How the Portfolio is Calculated
-
-### 1. Data
-
-Daily closing prices are loaded from `backend/data/`. Log-returns are computed and annualised (×252 trading days) to produce expected returns **μ** and covariance matrix **Σ**.
-
-### 2. Efficient Frontier
-
-120 points traced by solving, for each target return *t*:
+Maximises mean-variance utility using the investor's *A*:
 
 ```
-min   w'Σw
+U = w′μ − (A/2) · w′Σw
+
+max U   s.t.  Σwᵢ = 1,   wᵢ ≥ 0
  w
-s.t.  w'μ = t,   Σwᵢ = 1,   wᵢ ≥ 0
-```
-
-A short-selling toggle removes the non-negativity constraint. The **GMVP** anchors the left end.
-
-### 3. Optimal Portfolio
-
-Maximises mean-variance utility for the investor's risk aversion *A*:
-
-```
-max   U = w'μ − (A/2) · w'Σw
- w
-s.t.  Σwᵢ = 1,   wᵢ ≥ 0
 ```
 
 Solved with SciPy SLSQP. The result sits on the efficient frontier at the tangency point with the investor's indifference curve.
 
-### 4. Goal Planner
+### Goal planner
 
 Given investable capital *P₀*, target value *P_T*, and horizon *T* years:
 
@@ -155,48 +182,64 @@ Colour-coded against the portfolio's expected return:
 
 ---
 
+## Part 3 — Platform
+
+### App pages
+
+| Page | Description |
+|------|-------------|
+| **Overview** | Landing page explaining the tool and methodology |
+| **Risk Profile** | 10-question questionnaire → risk score + profile |
+| **My Portfolio** | Most recent portfolio recommendation, session-persistent |
+| **Frontier & Analytics** | Live efficient frontier, GMVP, correlation heatmap, fund scatter |
+| **Fund Overview** | Per-fund: cumulative return, rolling volatility, Sharpe ratio, covariance matrix |
+
+### API endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/questions` | Returns the 10 questionnaire questions |
+| POST | `/api/score` | Accepts answers → A, profile, willingness/capacity scores |
+| GET | `/api/portfolio` | Frontier points, GMVP, fund stats, correlation matrix |
+| GET | `/api/optimal?A=<value>` | Optimal weights for a given *A* |
+| GET | `/api/fund-overview` | Per-fund stats, cumulative returns, rolling volatility series |
+
+---
+
 ## Project Structure
 
 ```
 roboadvisor/
+├── analysis/
+│   ├── funds_analysis.py    ← 25 → 10 fund selection via correlation pruning
+│   ├── requirements.txt
+│   └── *.png                ← selection research charts
+│
 ├── backend/
 │   ├── app.py               ← Flask API, questionnaire logic, risk scoring
 │   ├── portfolio_math.py    ← returns, covariance, frontier, SLSQP optimiser
 │   ├── fetch_data.py        ← downloads fund price data via yfinance
-│   ├── generate_charts.py   ← static PNG charts (optional)
+│   ├── generate_charts.py   ← static PNG charts
 │   ├── requirements.txt
 │   └── data/                ← Excel price files (one per fund)
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx              ← router, side-navigation, theme toggle
+│   │   ├── App.jsx
 │   │   ├── pages/
 │   │   │   ├── HomePage.jsx
 │   │   │   ├── QuestionnairePage.jsx
-│   │   │   ├── MyPortfolioPage.jsx  ← cached assessment result
+│   │   │   ├── MyPortfolioPage.jsx
 │   │   │   ├── PortfolioPage.jsx
 │   │   │   └── FundOverviewPage.jsx
 │   │   └── components/
-│   │       └── ResultDashboard.jsx  ← full results UI (charts, tables, PDF export)
-│   ├── index.html
+│   │       └── ResultDashboard.jsx  ← charts, tables, PDF export
 │   ├── package.json
 │   └── vite.config.js
 │
-├── setup.py                 ← one-command setup (cross-platform)
+├── setup.py                 ← one-command cross-platform setup
 └── README.md
 ```
-
----
-
-## API Reference
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/questions` | Returns the 10 questionnaire questions |
-| POST | `/api/score` | Accepts answers, returns A, profile, willingness/capacity breakdown |
-| GET | `/api/portfolio` | Frontier points, GMVP, fund stats, correlation matrix |
-| GET | `/api/optimal?A=<value>` | Optimal weights for a given risk aversion *A* |
-| GET | `/api/fund-overview` | Per-fund stats, cumulative returns, rolling volatility series |
 
 ---
 
@@ -204,7 +247,7 @@ roboadvisor/
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 19 + Vite 8 |
+| Frontend | React 19 + Vite 6 |
 | Routing | React Router v7 |
 | Charts | Recharts |
 | Icons | Lucide React |
@@ -212,7 +255,3 @@ roboadvisor/
 | Optimisation | SciPy (SLSQP) |
 | Data processing | Pandas + NumPy |
 | Data download | yfinance |
-
----
-
-*BMD5302 Financial Modeling — Group Project — AY 2025/26 Semester 2*
