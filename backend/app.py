@@ -24,13 +24,8 @@ import traceback
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
-from portfolio_math import (
-    get_portfolio_data,
-    get_math_cache,
-    get_fund_overview,
-    solve_optimal_portfolio,
-    solve_portfolio_for_return,
-)
+from portfolio_optimizer import solve_optimal_portfolio, solve_portfolio_for_return
+from portfolio_data import get_portfolio_data, get_math_cache, get_fund_overview, run_monte_carlo
 
 app = Flask(__name__, static_folder="frontend/dist", static_url_path="/")
 CORS(app)
@@ -249,6 +244,43 @@ def api_optimal_for_return():
         allow_short = request.args.get("short", "false").lower() == "true"
         mu_a, cov_a = get_math_cache()
         return jsonify(solve_portfolio_for_return(mu_a, cov_a, target, allow_short=allow_short))
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/monte-carlo")
+def api_monte_carlo():
+    """
+    Runs a Monte Carlo simulation for 2026 using the user's optimal portfolio.
+    Query params:
+      A                 float  risk aversion (default 5.0)
+      short             bool   allow short sales (default false)
+      n_sims            int    number of simulations (default 2000, max 5000)
+      initial_investment float starting portfolio value (default 10000)
+    """
+    try:
+        A_val       = float(request.args.get("A", 5.0))
+        allow_short = request.args.get("short", "false").lower() == "true"
+        n_sims      = int(request.args.get("n_sims", 2000))
+        init_val    = float(request.args.get("initial_investment", 10000))
+
+        A_val  = max(1.0, min(10.0, A_val))
+        n_sims = max(100, min(5000, n_sims))
+
+        mu_a, cov_a = get_math_cache()
+        opt    = solve_optimal_portfolio(mu_a, cov_a, A_val, allow_short=allow_short)
+        result = run_monte_carlo(opt["weights"], mu_a, cov_a,
+                                 n_sims=n_sims, n_days=252,
+                                 initial_value=init_val)
+        result["portfolio"] = {
+            "return": opt["return"],
+            "std":    opt["std"],
+            "sharpe": opt["sharpe"],
+        }
+        return jsonify(result)
     except FileNotFoundError as e:
         return jsonify({"error": str(e)}), 404
     except Exception as e:
