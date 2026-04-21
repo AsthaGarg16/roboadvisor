@@ -140,7 +140,7 @@ def compute_risk_aversion(answers: dict) -> dict:
 
     rw_scores        = round(sum(rw) / len(rw), 4)
     rc_scores        = round(sum(rc) / len(rc), 4)
-    final_scores     = min(rw_scores, rc_scores)
+    final_scores     = (rw_scores + rc_scores) / 2
     raw_weighted_sum = round(sum(b["contribution"] for b in breakdown), 4)
     delta            = round(rw_scores - rc_scores, 4)
     A                = round(11 - final_scores, 4)
