@@ -45,11 +45,11 @@ Creates `backend/venv/` and installs all Python and Node packages.
 ### 2 — Get fund data
 
 ```bash
-cd backend
-python fetch_data.py        # downloads price history into ./data/
+cd analysis
+python3 fetch_data.py        # downloads price history into ../data/
 ```
 
-Or drop your own `.xlsx` files into `backend/data/` (column 0 = Date, column 1 = Adjusted Close Price).
+Or drop your own `.xlsx` files into `data/` at the project root (column 0 = Date, column 1 = Adjusted Close Price).
 
 ### 3 — Start the backend
 
@@ -89,7 +89,7 @@ See [`analysis/README.md`](analysis/README.md) for full details.
 
 ### Statistical analysis
 
-Daily closing prices are loaded from `backend/data/`. Log-returns are computed and annualised (×252 trading days) to produce:
+Daily closing prices are loaded from `data/` at the project root. Log-returns are computed and annualised (×252 trading days) to produce:
 
 - **μ** — vector of expected annual returns
 - **Σ** — variance-covariance matrix
@@ -222,8 +222,13 @@ Colour-coded against the portfolio's expected return:
 
 ```
 roboadvisor/
+├── data/                       ← Excel price files (one per fund) — shared by backend + analysis
+│
 ├── analysis/
-│   ├── funds_analysis.py       ← 25 → 10 fund selection via correlation pruning
+│   ├── funds_analysis.py       ← 25 → 10 fund selection via greedy correlation pruning
+│   ├── fetch_data.py           ← downloads fund price data into ../data/
+│   ├── generate_charts.py      ← static PNG report charts (reads ../data/ via backend modules)
+│   ├── charts/                 ← output PNG charts
 │   ├── requirements.txt
 │   └── *.png                   ← selection research charts
 │
@@ -231,10 +236,7 @@ roboadvisor/
 │   ├── app.py                  ← Flask API, questionnaire logic, risk scoring
 │   ├── portfolio_optimizer.py  ← pure maths: statistics, GMVP, frontier, SLSQP optimisers
 │   ├── portfolio_data.py       ← data loading, Monte Carlo simulation, caching, aggregated getters
-│   ├── fetch_data.py           ← downloads fund price data via yfinance
-│   ├── generate_charts.py      ← static PNG charts
-│   ├── requirements.txt
-│   └── data/                   ← Excel price files (one per fund)
+│   └── requirements.txt
 │
 ├── frontend/
 │   ├── src/

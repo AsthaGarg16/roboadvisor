@@ -2,14 +2,14 @@
 fetch_data.py
 =============
 Downloads historical closing prices for the 10 portfolio funds using yfinance
-and saves each as an Excel file in ./data/.
+and saves each as an Excel file in <project_root>/data/.
 
 Usage:
-    cd backend/
+    cd analysis/
     python fetch_data.py
 
 Output:
-    ./data/SPY.xlsx, ./data/QQQ.xlsx, ... (one file per ticker)
+    ../data/SPY.xlsx, ../data/QQQ.xlsx, ... (one file per ticker)
     Each file has two columns: Date | Close
 """
 
@@ -17,10 +17,10 @@ import os
 import yfinance as yf
 import pandas as pd
 
-TICKERS    = ["SPY", "QQQ", "EEM", "IEV", "INDA", "VNQ", "GLD", "SHY", "HYG", "XLV"]
+TICKERS    = ['EWJ', 'GLD', 'INDA', 'SHY', 'USO', 'VNQ', 'XLE', 'XLF', 'XLK', 'XLV']
 START_DATE = "2019-01-01"
 END_DATE   = "2024-12-31"
-DATA_DIR   = os.path.join(os.path.dirname(__file__), "data")
+DATA_DIR   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 
 
 def fetch_and_save():
@@ -28,10 +28,7 @@ def fetch_and_save():
     print(f"Downloading data for: {', '.join(TICKERS)}")
     print(f"Period: {START_DATE} → {END_DATE}\n")
 
-    # Download all tickers in one call (faster, fewer requests)
     raw = yf.download(TICKERS, start=START_DATE, end=END_DATE, auto_adjust=True)
-
-    # raw["Close"] is a DataFrame with tickers as columns
     close = raw["Close"]
 
     saved = []

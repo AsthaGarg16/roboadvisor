@@ -21,7 +21,7 @@ from portfolio_optimizer import (
 )
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-FOLDER    = "./data"
+FOLDER    = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 PATTERN   = "*.xlsx"
 DATE_COL  = 0
 PRICE_COL = 1
