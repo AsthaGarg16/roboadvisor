@@ -2,6 +2,10 @@
 
 A full-stack robo-advisor that takes an investor through a risk questionnaire, builds a personalised mean-variance optimal portfolio, runs Monte Carlo simulations for 2026, and visualises the efficient frontier, covariance structure, and fund analytics — all in a browser.
 
+**Live demo:** https://roboadvisor-two.vercel.app/
+
+> **Note:** The app is deployed on free-tier infrastructure (Vercel + Railway). The backend may take up to 30 seconds to respond on the first request after a period of inactivity.
+
 ---
 
 ## Assessment Coverage
@@ -24,7 +28,7 @@ A full-stack robo-advisor that takes an investor through a risk questionnaire, b
 
 ---
 
-## Quick Start
+## Quick Start (local)
 
 ### Prerequisites
 
@@ -40,7 +44,7 @@ A full-stack robo-advisor that takes an investor through a risk questionnaire, b
 python setup.py
 ```
 
-Creates `backend/venv/` and installs all Python and Node packages.
+Creates `venv/` and installs all Python and Node packages.
 
 ### 2 — Get fund data
 
@@ -49,16 +53,16 @@ cd analysis
 python3 fetch_data.py        # downloads price history into ../data/
 ```
 
-Or drop your own `.xlsx` files into `data/` at the project root (column 0 = Date, column 1 = Adjusted Close Price).
+Or drop your own `.xlsx` files into `data/` (column 0 = Date, column 1 = Adjusted Close Price).
 
 ### 3 — Start the backend
 
 ```bash
 # Mac / Linux
-cd backend && source venv/bin/activate && python app.py
+cd backend && source ../venv/bin/activate && python app.py
 
 # Windows
-cd backend && venv\Scripts\activate && python app.py
+cd backend && ..\venv\Scripts\activate && python app.py
 ```
 
 Flask API available at **http://localhost:5001**.
@@ -222,25 +226,21 @@ Colour-coded against the portfolio's expected return:
 
 ```
 roboadvisor/
-├── data/                       ← Excel price files (one per fund) — shared by backend + analysis
+├── data/                       ← Excel price files (one per fund)
 │
 ├── analysis/
 │   ├── funds_analysis.py       ← 25 → 10 fund selection via greedy correlation pruning
 │   ├── fetch_data.py           ← downloads fund price data into ../data/
-│   ├── generate_charts.py      ← static PNG report charts (reads ../data/ via backend modules)
-│   ├── charts/                 ← output PNG charts
-│   ├── requirements.txt
+│   ├── generate_charts.py      ← static PNG report charts
 │   └── *.png                   ← selection research charts
 │
 ├── backend/
 │   ├── app.py                  ← Flask API, questionnaire logic, risk scoring
 │   ├── portfolio_optimizer.py  ← pure maths: statistics, GMVP, frontier, SLSQP optimisers
-│   ├── portfolio_data.py       ← data loading, Monte Carlo simulation, caching, aggregated getters
-│   └── requirements.txt
+│   └── portfolio_data.py       ← data loading, Monte Carlo simulation, caching
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx
 │   │   ├── pages/
 │   │   │   ├── HomePage.jsx
 │   │   │   ├── QuestionnairePage.jsx
@@ -248,11 +248,13 @@ roboadvisor/
 │   │   │   ├── PortfolioPage.jsx
 │   │   │   └── FundOverviewPage.jsx
 │   │   └── components/
-│   │       └── ResultDashboard.jsx  ← charts, Monte Carlo visualisations, goal planner, PDF export
-│   ├── package.json
+│   │       └── ResultDashboard.jsx
+│   ├── vercel.json             ← Vercel SPA routing config
 │   └── vite.config.js
 │
-├── setup.py                    ← one-command cross-platform setup
+├── requirements.txt            ← Python dependencies (used by Railway)
+├── railway.toml                ← Railway deployment config
+├── setup.py                    ← one-command local setup
 └── README.md
 ```
 
@@ -270,4 +272,4 @@ roboadvisor/
 | Optimisation    | SciPy (SLSQP)                                                         |
 | Simulation      | NumPy (Cholesky Monte Carlo)                                          |
 | Data processing | Pandas + NumPy                                                        |
-| Data download   | yfinance                                                              |
+| Hosting         | Vercel (frontend) + Railway (backend)                                 |
