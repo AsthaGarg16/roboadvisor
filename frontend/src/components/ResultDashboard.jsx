@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 
 /* ─────────────────────────── CONSTANTS ─────────────────────────── */
-const API = 'http://localhost:5001'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 const FUND_COLORS = [
   '#c9a84c','#38bdf8','#4ade80','#f87171','#a78bfa',

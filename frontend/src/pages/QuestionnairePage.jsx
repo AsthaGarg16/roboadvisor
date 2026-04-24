@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import ResultDashboard from '../components/ResultDashboard'
 
-const API = 'http://localhost:5001'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 export default function QuestionnairePage() {
   const navigate        = useNavigate()
