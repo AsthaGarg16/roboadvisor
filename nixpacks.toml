@@ -1,4 +1,0 @@
-providers = ["python"]
-
-[phases.install]
-cmds = ["python -m pip install -r backend/requirements.txt"]
