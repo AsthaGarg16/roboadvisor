@@ -2,7 +2,8 @@
 
 A full-stack robo-advisor that takes an investor through a risk questionnaire, builds a personalised mean-variance optimal portfolio, runs Monte Carlo simulations for 2026, and visualises the efficient frontier, covariance structure, and fund analytics — all in a browser.
 
-**Live demo:** https://roboadvisor-two.vercel.app/
+**Demo Video:** https://youtu.be/SO_d2Zvie9s
+**Deployed WebApp:** https://roboadvisor-two.vercel.app/
 
 > **Note:** The app is deployed on free-tier infrastructure (Vercel + Railway). The backend may take up to 30 seconds to respond on the first request after a period of inactivity.
 
